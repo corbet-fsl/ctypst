@@ -1,0 +1,53 @@
+[package]
+name = "ctypst"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+description = "Safe, deterministic, embedded Typst for Rust applications"
+license = "FSL-1.1-ALv2"
+repository = "https://github.com/corbet-labs/ctypst"
+homepage = "https://github.com/corbet-labs/ctypst"
+documentation = "https://docs.rs/ctypst"
+readme = "README.md"
+keywords = ["typst", "pdf", "rendering", "documents"]
+categories = ["template-engine", "rendering"]
+publish = ["crates-io"]
+
+[features]
+default = ["document-fonts", "format", "pdf", "raster"]
+document-fonts = []
+format = ["dep:typstyle-core"]
+pdf = ["dep:time", "dep:typst-pdf"]
+raster = ["dep:typst-render"]
+
+[dependencies]
+serde_json = "1.0"
+thiserror = "2.0"
+typst = "0.15.1"
+typst-as-lib = { version = "0.16", default-features = false }
+typst-layout = "0.15.1"
+typst-pdf = { version = "0.15.1", optional = true }
+typst-render = { version = "0.15.1", optional = true }
+typstyle-core = { version = "0.15.1", optional = true }
+time = { version = "0.3", optional = true }
+
+[dev-dependencies]
+tempfile = "3.23"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
+
+[package.metadata.docs.rs]
+all-features = true
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"

@@ -1,0 +1,138 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_TOOLCHAIN: 1.92.0
+
+jobs:
+  publish:
+    name: Publish crate and GitHub release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install exact Rust toolchain
+        run: |
+          rustup toolchain install "$RUST_TOOLCHAIN" \
+            --profile minimal \
+            --component clippy,rustfmt
+          test "$(rustc "+$RUST_TOOLCHAIN" --version | awk '{print $2}')" = "$RUST_TOOLCHAIN"
+
+      - name: Verify release identity
+        id: release
+        shell: bash
+        run: |
+          version="$(cargo "+$RUST_TOOLCHAIN" metadata --locked --no-deps --format-version 1 \
+            | jq -r '.packages[] | select(.name == "ctypst") | .version')"
+          test -n "$version"
+          test "$GITHUB_REF_NAME" = "v$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Verify source and package
+        run: |
+          cargo "+$RUST_TOOLCHAIN" fmt --check
+          cargo "+$RUST_TOOLCHAIN" clippy --locked --all-targets --all-features -- -D warnings
+          cargo "+$RUST_TOOLCHAIN" test --locked --all-features
+          cargo "+$RUST_TOOLCHAIN" publish --locked --dry-run
+
+      - name: Detect one-time bootstrap credential
+        id: bootstrap
+        shell: bash
+        env:
+          CRATES_IO_BOOTSTRAP_TOKEN: ${{ secrets.CRATES_IO_BOOTSTRAP_TOKEN }}
+        run: |
+          if [[ -n "$CRATES_IO_BOOTSTRAP_TOKEN" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Authenticate through trusted publishing
+        if: steps.bootstrap.outputs.available == 'false'
+        id: trusted
+        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+
+      - name: Publish first release with bootstrap credential
+        if: steps.bootstrap.outputs.available == 'true'
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_BOOTSTRAP_TOKEN }}
+        run: cargo "+$RUST_TOOLCHAIN" publish --locked
+
+      - name: Configure tokenless trusted publishing
+        if: steps.bootstrap.outputs.available == 'true'
+        shell: bash
+        env:
+          CRATES_IO_BOOTSTRAP_TOKEN: ${{ secrets.CRATES_IO_BOOTSTRAP_TOKEN }}
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: $CRATES_IO_BOOTSTRAP_TOKEN" \
+            --header "Content-Type: application/json" \
+            --header "User-Agent: ctypst-release ($GITHUB_SERVER_URL/$GITHUB_REPOSITORY)" \
+            --data '{"github_config":{"crate":"ctypst","repository_owner":"corbet-labs","repository_name":"ctypst","workflow_filename":"release.yml","environment":null}}' \
+            https://crates.io/api/v1/trusted_publishing/github_configs \
+            >/dev/null
+
+          curl --fail-with-body --silent --show-error \
+            --request PATCH \
+            --header "Authorization: $CRATES_IO_BOOTSTRAP_TOKEN" \
+            --header "Content-Type: application/json" \
+            --header "User-Agent: ctypst-release ($GITHUB_SERVER_URL/$GITHUB_REPOSITORY)" \
+            --data '{"crate":{"trustpub_only":true}}' \
+            https://crates.io/api/v1/crates/ctypst \
+            >/dev/null
+
+      - name: Publish through trusted publishing
+        if: steps.bootstrap.outputs.available == 'false'
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.trusted.outputs.token }}
+        run: cargo "+$RUST_TOOLCHAIN" publish --locked
+
+      - name: Wait for the crates.io index
+        shell: bash
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          for _ in {1..20}; do
+            if curl --fail --silent --show-error \
+              "https://crates.io/api/v1/crates/ctypst/$VERSION" >/dev/null; then
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "ctypst $VERSION did not appear on crates.io in time" >&2
+          exit 1
+
+      - name: Create GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          awk -v heading="## $VERSION " '
+            index($0, heading) == 1 { in_release = 1; next }
+            in_release && /^## / { exit }
+            in_release { print }
+          ' CHANGELOG.md > release-notes.md
+          test -s release-notes.md
+          gh release create "$GITHUB_REF_NAME" \
+            --verify-tag \
+            --title "ctypst $VERSION" \
+            --notes-file release-notes.md
