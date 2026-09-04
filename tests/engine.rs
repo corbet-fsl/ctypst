@@ -19,6 +19,11 @@ fn engine_with(source: &str) -> Engine {
 }
 
 #[test]
+fn document_font_pack_contains_only_the_four_archivo_faces() {
+    assert_eq!(fonts::documents().len(), 4);
+}
+
+#[test]
 fn compiles_queries_and_updates_inputs_without_rebuilding_fonts() {
     let engine = engine_with(
         "#import sys: inputs\n#set text(font: \"Archivo\")\n#metadata(inputs.value) <probe>\n#inputs.value",
@@ -170,7 +175,7 @@ fn failed_compilation_rolls_back_request_scoped_files() {
 #[test]
 fn malformed_font_is_rejected_even_beside_valid_fonts() {
     let error = Engine::builder()
-        .fonts([fonts::archivo()[0], b"not a font"])
+        .fonts([fonts::documents()[0], b"not a font"])
         .source("main.typ", "Hello")
         .unwrap()
         .build()

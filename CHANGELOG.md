@@ -3,6 +3,12 @@
 All notable changes to `ctypst` are documented here. The project follows
 Semantic Versioning.
 
+## 0.1.1 - 2026-09-04
+
+- Reduce the embedded `document-fonts` feature to Archivo Regular, Medium,
+  Bold, and Italic.
+- Remove the twelve unused font assets from the published crate.
+
 ## 0.1.0 - 2026-09-04
 
 - Introduce reusable embedded Typst compilation with bounded filesystem and
