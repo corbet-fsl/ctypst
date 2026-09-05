@@ -3,6 +3,10 @@
   "version": "0.3.0",
   "description": "Shared Typst measurement: versioned protocol, Typst-WASM adapter, font manifest and assets. Mirrors the ctypst Rust crate release line.",
   "license": "FSL-1.1-ALv2",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/corbet-labs/ctypst.git",
