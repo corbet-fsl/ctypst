@@ -3,6 +3,13 @@
 All notable changes to `ctypst` are documented here. The project follows
 Semantic Versioning.
 
+## 0.3.0 - 2026-09-05
+
+- Add per-page SVG export behind the `svg` Cargo feature.
+- Add the `wasm` Cargo feature: the whole runtime (engine, measurement,
+  exporters, embedded fonts) as a `wasm-bindgen` boundary for browsers
+  and Node, so every runtime executes the same code.
+
 ## 0.2.0 - 2026-09-05
 
 - Add the versioned measurement protocol (`ctypst-measure-v1`): one shared

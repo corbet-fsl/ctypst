@@ -82,8 +82,7 @@ pub enum Error {
     /// Typst failed to export a PDF.
     #[error("Typst PDF export failed: {0}")]
     Pdf(String),
-    #[cfg(feature = "raster")]
-    /// A zero-based raster page index was unavailable.
+    /// A zero-based page index was unavailable.
     #[error("page {page} is unavailable; document has {pages} pages")]
     MissingPage {
         /// Requested zero-based page index.

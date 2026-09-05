@@ -1,6 +1,6 @@
 {
   "name": "@corbet-labs/ctypst",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Shared Typst measurement: versioned protocol, Typst-WASM adapter, font manifest and assets. Mirrors the ctypst Rust crate release line.",
   "license": "FSL-1.1-ALv2",
   "repository": {
@@ -14,12 +14,14 @@
   "exports": {
     ".": "./src/index.ts",
     "./assets/measure-v1.typ": "./assets/measure-v1.typ",
-    "./fonts/*": "./fonts/*"
+    "./fonts/*": "./fonts/*",
+    "./wasm/*": "./wasm/*"
   },
   "files": [
     "src/**/*",
     "assets/**/*",
     "fonts/**/*",
+    "wasm/**/*",
     "README.md"
   ],
   "scripts": {

@@ -2,4 +2,5 @@
 /src/generated
 /assets
 /fonts
+/wasm
 *.tgz

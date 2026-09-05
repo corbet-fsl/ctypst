@@ -17,6 +17,10 @@ mod pdf;
 mod query;
 #[cfg(feature = "raster")]
 mod raster;
+#[cfg(feature = "svg")]
+mod svg;
+#[cfg(feature = "wasm")]
+pub mod wasm;
 
 pub use config::{CompileOutput, CompileRequest, DiagnosticsPolicy, Limits, PageConstraint};
 pub use engine::{Engine, EngineBuilder};

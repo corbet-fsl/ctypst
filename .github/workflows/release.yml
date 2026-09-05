@@ -190,6 +190,57 @@ jobs:
         with:
           bun-version: 1.4.0
 
+      - name: Build WebAssembly artifacts
+        shell: bash
+        run: |
+          rustup target add wasm32-unknown-unknown
+          bindgen="$(cargo "+$RUST_TOOLCHAIN" metadata --locked --no-deps --format-version 1 \
+            | jq -r '.packages[] | select(.name == "wasm-bindgen") | .version')"
+          test -n "$bindgen"
+          curl --fail --silent --show-error --location \
+            "https://github.com/bytecodealliance/wasm-bindgen/releases/download/${bindgen}/wasm-bindgen-${bindgen}-x86_64-unknown-linux-musl.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP"
+          cargo "+$RUST_TOOLCHAIN" build --locked --release \
+            --target wasm32-unknown-unknown \
+            --no-default-features --features wasm
+          "$RUNNER_TEMP/wasm-bindgen-${bindgen}-x86_64-unknown-linux-musl/wasm-bindgen" \
+            --target web --out-dir js/@corbet-labs/ctypst/wasm/web \
+            target/wasm32-unknown-unknown/release/ctypst.wasm
+          "$RUNNER_TEMP/wasm-bindgen-${bindgen}-x86_64-unknown-linux-musl/wasm-bindgen" \
+            --target nodejs --out-dir js/@corbet-labs/ctypst/wasm/nodejs \
+            target/wasm32-unknown-unknown/release/ctypst.wasm
+          ls js/@corbet-labs/ctypst/wasm/web js/@corbet-labs/ctypst/wasm/nodejs
+
+      - name: Smoke-test the packaged WebAssembly
+        shell: bash
+        working-directory: js/@corbet-labs/ctypst
+        run: |
+          bun install --frozen-lockfile
+          bun pm pack
+          rm -rf "$RUNNER_TEMP/wasm-smoke" && mkdir -p "$RUNNER_TEMP/wasm-smoke"
+          tar -xzf ./*.tgz -C "$RUNNER_TEMP/wasm-smoke"
+          cat > "$RUNNER_TEMP/wasm-smoke/smoke.mjs" <<'EOF'
+          import { Ctypst } from './package/wasm/nodejs/ctypst.js';
+          import { readFileSync } from 'node:fs';
+          const ct = new Ctypst();
+          const root = process.env.GITHUB_WORKSPACE;
+          const vectors = JSON.parse(readFileSync(`${root}/protocol/measure-v1/requests.json`, 'utf8'));
+          let items = 0;
+          for (const { request } of vectors.requests) {
+            const f = request.format;
+            const format = JSON.stringify({ font: f.font, baseFontSize: f.baseFontSize, entryHeadingSize: f.entryHeadingSize, leadingValue: f.leadingEm, leadingRelative: true, marginLeft: f.marginLeft, marginRight: f.marginRight, pageSize: f.pageSize });
+            const out = JSON.parse(ct.measure_all(format, JSON.stringify(request.items)));
+            items += out.results.length;
+            if (out.results.length !== request.items.length) throw new Error('result count mismatch');
+          }
+          const doc = ct.compile('#set text(font: "Archivo")\nsmoke', '{}');
+          if (doc.page_count() !== 1) throw new Error('page count mismatch');
+          if (!doc.svg_page(0).startsWith('<svg')) throw new Error('svg mismatch');
+          if (Buffer.from(doc.pdf().slice(0, 5)).toString() !== '%PDF-') throw new Error('pdf mismatch');
+          console.log('wasm smoke green:', items, 'items measured, svg+pdf export');
+          EOF
+          bun "$RUNNER_TEMP/wasm-smoke/smoke.mjs"
+
       - name: Attach the JavaScript measurement package
         shell: bash
         env:
@@ -197,6 +248,4 @@ jobs:
         run: |
           cd js/@corbet-labs/ctypst
           test "$(bun -p "require('./package.json').version")" = "${{ steps.release.outputs.version }}"
-          bun install --frozen-lockfile
-          bun pm pack
           gh release upload "$RELEASE_TAG" ./*.tgz --clobber

@@ -1,6 +1,6 @@
 [package]
 name = "ctypst"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 rust-version = "1.92"
 description = "Safe, deterministic, embedded Typst for Rust applications"
@@ -13,6 +13,9 @@ keywords = ["typst", "pdf", "rendering", "documents"]
 categories = ["template-engine", "rendering"]
 publish = ["crates-io"]
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [features]
 default = ["document-fonts", "format", "pdf", "raster"]
 document-fonts = []
@@ -20,6 +23,8 @@ format = ["dep:typstyle-core"]
 measure = []
 pdf = ["dep:time", "dep:typst-pdf"]
 raster = ["dep:typst-render"]
+svg = ["dep:typst-svg"]
+wasm = ["dep:wasm-bindgen", "document-fonts", "measure", "pdf", "svg"]
 
 [dependencies]
 serde_json = "1.0"
@@ -29,7 +34,9 @@ typst-as-lib = { version = "0.16", default-features = false }
 typst-layout = "0.15.1"
 typst-pdf = { version = "0.15.1", optional = true }
 typst-render = { version = "0.15.1", optional = true }
+typst-svg = { version = "0.15.1", optional = true }
 typstyle-core = { version = "0.15.1", optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
 time = { version = "0.3", optional = true }
 serde = { version = "1.0.229", features = ["derive"] }
 

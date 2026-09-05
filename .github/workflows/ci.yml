@@ -44,7 +44,7 @@ jobs:
       - name: Check minimal feature boundary
         run: |
           cargo "+$RUST_TOOLCHAIN" check --locked --no-default-features
-          for feature in document-fonts format pdf raster; do
+          for feature in document-fonts format measure pdf raster svg wasm; do
             cargo "+$RUST_TOOLCHAIN" check --locked --no-default-features --features "$feature"
           done
 
