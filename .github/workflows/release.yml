@@ -184,3 +184,19 @@ jobs:
               --title "ctypst $VERSION" \
               --notes-file release-notes.md
           fi
+
+      - name: Install exact Bun release
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.4.0
+
+      - name: Attach the JavaScript measurement package
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd js/@corbet-labs/ctypst
+          test "$(bun -p "require('./package.json').version")" = "${{ steps.release.outputs.version }}"
+          bun install --frozen-lockfile
+          bun pm pack
+          gh release upload "$RELEASE_TAG" ./*.tgz --clobber

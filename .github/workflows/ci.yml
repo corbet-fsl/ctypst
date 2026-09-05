@@ -82,3 +82,48 @@ jobs:
 
       - name: Run locked tests with all capabilities
         run: cargo "+${{ env.RUST_TOOLCHAIN }}" test --locked --all-features
+
+  matrix:
+    name: Cross-runtime measurement conformance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install exact Bun release
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.4.0
+
+      - name: Install locked JavaScript dependencies
+        working-directory: js/@corbet-labs/ctypst
+        run: bun install --frozen-lockfile
+
+      - name: Check JavaScript package tracks the crate release line
+        working-directory: js/@corbet-labs/ctypst
+        run: |
+          js="$(bun -p "require('./package.json').version")"
+          crate="$(grep -m1 '^version' ../../../Cargo.toml | sed 's/.*"\(.*\)"/\1/')"
+          test "$js" = "$crate" || { echo "js $js tracks no crate release ($crate)"; exit 1; }
+
+      - name: Sync generated adapter assets
+        working-directory: js/@corbet-labs/ctypst
+        run: bash ./scripts/sync-assets.sh
+
+      - name: Type-check the adapter
+        working-directory: js/@corbet-labs/ctypst
+        run: bun ./node_modules/typescript/bin/tsc --noEmit -p ./tsconfig.json
+
+      - name: Run WASM conformance vectors
+        working-directory: js/@corbet-labs/ctypst
+        run: bun ./scripts/conformance.mts
+
+      - name: Verify the packed tarball is complete
+        working-directory: js/@corbet-labs/ctypst
+        run: |
+          bun pm pack >/dev/null
+          test "$(tar tzf ./*.tgz | grep -c '\.ttf$')" = 16
+          rm -f ./*.tgz

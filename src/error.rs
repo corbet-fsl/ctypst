@@ -71,6 +71,9 @@ pub enum Error {
     /// Typst metadata could not be serialized as JSON.
     #[error("Typst metadata query failed: {0}")]
     Query(String),
+    /// A measurement request or response failed validation.
+    #[error("measurement failed: {0}")]
+    Measure(String),
     #[cfg(feature = "pdf")]
     /// The requested deterministic PDF timestamp is outside Typst's range.
     #[error("invalid deterministic PDF timestamp {0}")]

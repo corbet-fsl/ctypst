@@ -1,7 +1,7 @@
 # ctypst
 
 `ctypst` is the small native Typst substrate shared by CCVL and CareerVector.
-It embeds the compiler and the four Archivo faces, renders deterministic PDFs, exposes
+It embeds the compiler and selected fonts, renders deterministic PDFs, exposes
 Typst metadata queries and raster pages, and keeps product-specific document
 rules out of the engine.
 
@@ -49,7 +49,7 @@ let pdf = engine.pdf(&output.document, 0)?;
 
 Feature flags keep consumers lean:
 
-- `document-fonts`: Archivo Regular, Medium, Bold, and Italic;
+- `document-fonts`: the complete document pack plus an Archivo-only subset;
 - `format`: Typstyle source formatting;
 - `pdf`: deterministic PDF export;
 - `raster`: RGBA page rendering.

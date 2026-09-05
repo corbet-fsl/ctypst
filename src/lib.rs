@@ -10,6 +10,8 @@ mod files;
 pub mod fonts;
 #[cfg(feature = "format")]
 mod format;
+#[cfg(feature = "measure")]
+pub mod measure;
 #[cfg(feature = "pdf")]
 mod pdf;
 mod query;

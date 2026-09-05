@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/corbet-labs/ctypst/protocol/measure-v1/schema.json",
+  "title": "ctypst-measure-v1 request and result envelope",
+  "description": "Immutable contract for the one shared Typst measurement program. A behavior change creates ctypst-measure-v2; implementation and performance changes that preserve the vectors remain v1-compatible.",
+  "type": "object",
+  "required": ["version", "format", "items"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": "ctypst-measure-v1" },
+    "format": {
+      "type": "object",
+      "required": ["font", "baseFontSize", "entryHeadingSize", "leadingEm", "marginLeft", "marginRight", "pageSize"],
+      "additionalProperties": false,
+      "properties": {
+        "font": { "type": "string", "minLength": 1 },
+        "baseFontSize": { "type": "number", "exclusiveMinimum": 0 },
+        "entryHeadingSize": { "type": "number", "exclusiveMinimum": 0 },
+        "leadingEm": { "type": "number", "exclusiveMinimum": 0 },
+        "marginLeft": { "type": "number", "minimum": 0 },
+        "marginRight": { "type": "number", "minimum": 0 },
+        "pageSize": { "type": "string", "minLength": 1 }
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "text", "fontSize", "weight", "usableWidthPt"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "text": { "type": "string" },
+          "fontSize": { "type": "number", "exclusiveMinimum": 0 },
+          "weight": { "enum": ["regular", "bold"] },
+          "usableWidthPt": { "type": "number", "exclusiveMinimum": 0 }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "resultItem": {
+      "type": "object",
+      "required": ["id", "w", "h", "lines"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "w": { "type": "number", "minimum": 0 },
+        "h": { "type": "number", "minimum": 0 },
+        "lines": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "calibration": {
+      "type": "object",
+      "required": ["base-1", "base-2", "head-1", "head-2", "ratios"],
+      "additionalProperties": true,
+      "properties": {
+        "ratios": {
+          "type": "object",
+          "required": ["cap-reg", "adv-reg", "cap-bold", "adv-bold"],
+          "additionalProperties": false,
+          "properties": {
+            "cap-reg": { "type": "number" },
+            "adv-reg": { "type": "number" },
+            "cap-bold": { "type": "number" },
+            "adv-bold": { "type": "number" }
+          }
+        }
+      }
+    }
+  }
+}

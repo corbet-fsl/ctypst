@@ -1,6 +1,6 @@
 [package]
 name = "ctypst"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.92"
 description = "Safe, deterministic, embedded Typst for Rust applications"
@@ -17,6 +17,7 @@ publish = ["crates-io"]
 default = ["document-fonts", "format", "pdf", "raster"]
 document-fonts = []
 format = ["dep:typstyle-core"]
+measure = []
 pdf = ["dep:time", "dep:typst-pdf"]
 raster = ["dep:typst-render"]
 
@@ -30,8 +31,10 @@ typst-pdf = { version = "0.15.1", optional = true }
 typst-render = { version = "0.15.1", optional = true }
 typstyle-core = { version = "0.15.1", optional = true }
 time = { version = "0.3", optional = true }
+serde = { version = "1.0.229", features = ["derive"] }
 
 [dev-dependencies]
+sha2 = "0.10.9"
 tempfile = "3.23"
 
 [profile.release]

@@ -19,8 +19,9 @@ fn engine_with(source: &str) -> Engine {
 }
 
 #[test]
-fn document_font_pack_contains_only_the_four_archivo_faces() {
-    assert_eq!(fonts::documents().len(), 4);
+fn document_font_pack_contains_all_sixteen_faces() {
+    assert_eq!(fonts::documents().len(), 16);
+    assert_eq!(fonts::archivo().len(), 4);
 }
 
 #[test]

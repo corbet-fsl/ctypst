@@ -1,0 +1,151 @@
+{
+ "protocol": "ctypst-measure-v1",
+ "requests": [
+  {
+   "name": "ruler-parity-a4",
+   "request": {
+    "items": [
+     {
+      "fontSize": 9.5,
+      "id": "summary-\"quoted\"",
+      "text": "Led [teams] across #1 and \\ paths.",
+      "usableWidthPt": 487.5591,
+      "weight": "regular"
+     },
+     {
+      "fontSize": 11.0,
+      "id": "heading",
+      "text": "*Strategy* & delivery",
+      "usableWidthPt": 455.3858,
+      "weight": "bold"
+     },
+     {
+      "fontSize": 10.5,
+      "id": "markup",
+      "text": "*bold* _italic_",
+      "usableWidthPt": 400.0,
+      "weight": "regular"
+     },
+     {
+      "fontSize": 10.5,
+      "id": "escapes",
+      "text": "# $ @ ` < ~ \\ [x]",
+      "usableWidthPt": 400.0,
+      "weight": "regular"
+     },
+     {
+      "fontSize": 10.5,
+      "id": "emoji",
+      "text": "😀 done",
+      "usableWidthPt": 400.0,
+      "weight": "regular"
+     },
+     {
+      "fontSize": 10.5,
+      "id": "empty",
+      "text": "",
+      "usableWidthPt": 400.0,
+      "weight": "regular"
+     },
+     {
+      "fontSize": 10.5,
+      "id": "de-long",
+      "text": "Mittelstandsmandate verbinden Finanzen, Betrieb und Donaudampfschifffahrtsgesellschaftskapitän.",
+      "usableWidthPt": 487.5591,
+      "weight": "regular"
+     },
+     {
+      "fontSize": 10.5,
+      "id": "für-alles",
+      "text": "Größe prüfen: naïve façade — coöperate?",
+      "usableWidthPt": 400.0,
+      "weight": "bold"
+     },
+     {
+      "id": "wrap-narrow",
+      "text": "Mittelstandsmandate verbinden Finanzen, Betrieb und Technologie in der Schweiz.",
+      "fontSize": 10.5,
+      "weight": "regular",
+      "usableWidthPt": 120.0
+     },
+     {
+      "id": "wrap-bold",
+      "text": "Bei CENVION führte ich GenAI mit Claude in Portfolioanalyse und Reporting ein.",
+      "fontSize": 11.0,
+      "weight": "bold",
+      "usableWidthPt": 200.0
+     },
+     {
+      "id": "wrap-markup",
+      "text": "Strategie mit *Agentic AI*, Cloud-Systemen und _pragmatischer_ Umsetzung.",
+      "fontSize": 9.5,
+      "weight": "regular",
+      "usableWidthPt": 150.0
+     },
+     {
+      "id": "wrap-tiny",
+      "text": "Supercalifragilisticexpialidocious antidisestablishmentarianism.",
+      "fontSize": 10.5,
+      "weight": "regular",
+      "usableWidthPt": 100.0
+     }
+    ],
+    "format": {
+     "font": "Archivo",
+     "baseFontSize": 9.5,
+     "entryHeadingSize": 11.0,
+     "leadingEm": 0.66,
+     "marginLeft": 19.0,
+     "marginRight": 19.0,
+     "pageSize": "a4"
+    },
+    "version": "ctypst-measure-v1"
+   }
+  },
+  {
+   "name": "serif-us-letter",
+   "request": {
+    "version": "ctypst-measure-v1",
+    "format": {
+     "font": "Source Serif 4",
+     "baseFontSize": 10.0,
+     "entryHeadingSize": 12.0,
+     "leadingEm": 0.7,
+     "marginLeft": 12.0,
+     "marginRight": 18.0,
+     "pageSize": "us-letter"
+    },
+    "items": [
+     {
+      "id": "serif-head",
+      "text": "Investment *Committee* Memorandum",
+      "fontSize": 12.0,
+      "weight": "bold",
+      "usableWidthPt": 300.0
+     },
+     {
+      "id": "serif-body",
+      "text": "Für sieben Speicher modellierte ich IRR, NPV und DSCR; die Analysen stützten Pakete institutioneller Investoren.",
+      "fontSize": 10.0,
+      "weight": "regular",
+      "usableWidthPt": 180.0
+     },
+     {
+      "id": "serif-empty",
+      "text": "",
+      "fontSize": 10.0,
+      "weight": "regular",
+      "usableWidthPt": 180.0
+     },
+     {
+      "id": "serif-marks",
+      "text": "50% up, $4m @x [sic] ~ok~ `raw` <tag> C:\\tmp",
+      "fontSize": 10.0,
+      "weight": "regular",
+      "usableWidthPt": 250.0
+     }
+    ]
+   }
+  }
+ ]
+}

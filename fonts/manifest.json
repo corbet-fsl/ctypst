@@ -1,0 +1,134 @@
+{
+ "manifest": "ctypst-fonts-v1",
+ "license": "OFL-1.1 (see fonts/NOTICE.md)",
+ "fonts": [
+  {
+   "file": "Archivo-Bold.ttf",
+   "family": "Archivo",
+   "weight": 700,
+   "style": "normal",
+   "license": "OFL-1.1",
+   "sha256": "951a0ebab63b1bb0d90a26c27625bda803d570dace3851fa2f1eea65852d8983"
+  },
+  {
+   "file": "Archivo-Italic.ttf",
+   "family": "Archivo",
+   "weight": 400,
+   "style": "italic",
+   "license": "OFL-1.1",
+   "sha256": "344ac62b73990a6e7f18d28af41c9e952098faf58dbe46048b02aca7128c0974"
+  },
+  {
+   "file": "Archivo-Medium.ttf",
+   "family": "Archivo",
+   "weight": 500,
+   "style": "normal",
+   "license": "OFL-1.1",
+   "sha256": "6d42123d7954e72600b2e29284a9c8c95cddb4372b21cd3d2a5e8cd4f231f36b"
+  },
+  {
+   "file": "Archivo-Regular.ttf",
+   "family": "Archivo",
+   "weight": 400,
+   "style": "normal",
+   "license": "OFL-1.1",
+   "sha256": "59fbfd8a9bb41301bfe950e7b097fd42d52af224a07761e2c1b2c959a4c9cf9a"
+  },
+  {
+   "file": "eb-garamond-latin-400-italic.ttf",
+   "family": "EB Garamond",
+   "weight": 400,
+   "style": "italic",
+   "license": "OFL-1.1",
+   "sha256": "04b660bacbef527222fe6f72439d8f64ca2bafafec032ac2e5c17fd5e466536e"
+  },
+  {
+   "file": "eb-garamond-latin-400-normal.ttf",
+   "family": "EB Garamond",
+   "weight": 400,
+   "style": "normal",
+   "license": "OFL-1.1",
+   "sha256": "75366942203f4b1cbc7c229c31126c6daf80d4957b93f34e865d26f6e8662d9b"
+  },
+  {
+   "file": "eb-garamond-latin-500-normal.ttf",
+   "family": "EB Garamond",
+   "weight": 500,
+   "style": "normal",
+   "license": "OFL-1.1",
+   "sha256": "b8a57d830e6a63a508e2a3a495141359555b91f15e613494abdfec1e17aa19f9"
+  },
+  {
+   "file": "eb-garamond-latin-700-normal.ttf",
+   "family": "EB Garamond",
+   "weight": 700,
+   "style": "normal",
+   "license": "OFL-1.1",
+   "sha256": "286895f9fd113fad33b10344b162e40d2ae058204b84d851670a9350c3a6ca6f"
+  },
+  {
+   "file": "ibm-plex-serif-latin-400-italic.ttf",
+   "family": "IBM Plex Serif",
+   "weight": 400,
+   "style": "italic",
+   "license": "OFL-1.1",
+   "sha256": "9e375cad137953e4460a9b817eedac47a8f3b780e25a0a7e2de84933ce21ee2b"
+  },
+  {
+   "file": "ibm-plex-serif-latin-400-normal.ttf",
+   "family": "IBM Plex Serif",
+   "weight": 400,
+   "style": "normal",
+   "license": "OFL-1.1",
+   "sha256": "e74167358501b8a5a141a6e1f2f779749d57d79354fc8f98033091b6eeb642b3"
+  },
+  {
+   "file": "ibm-plex-serif-latin-500-normal.ttf",
+   "family": "IBM Plex Serif",
+   "weight": 500,
+   "style": "normal",
+   "license": "OFL-1.1",
+   "sha256": "0bc18fa7b239aa7bc00e9a36dc62f8c7a5fdd36c6a311e254f3557247535c4e0"
+  },
+  {
+   "file": "ibm-plex-serif-latin-700-normal.ttf",
+   "family": "IBM Plex Serif",
+   "weight": 700,
+   "style": "normal",
+   "license": "OFL-1.1",
+   "sha256": "e3b5cb244075700422287d8026693cb76c618decbc86c0194eba9a08d4899080"
+  },
+  {
+   "file": "source-serif-4-latin-400-italic.ttf",
+   "family": "Source Serif 4",
+   "weight": 400,
+   "style": "italic",
+   "license": "OFL-1.1",
+   "sha256": "a97b080d919660e63d18540c706e09e74d14fe7f0172cb87fd9601d75d69fa57"
+  },
+  {
+   "file": "source-serif-4-latin-400-normal.ttf",
+   "family": "Source Serif 4",
+   "weight": 400,
+   "style": "normal",
+   "license": "OFL-1.1",
+   "sha256": "38bfbf0084d0328fff23547a40124407af1d059829f49b16ce98bb7ed5f5f776"
+  },
+  {
+   "file": "source-serif-4-latin-500-normal.ttf",
+   "family": "Source Serif 4",
+   "weight": 500,
+   "style": "normal",
+   "license": "OFL-1.1",
+   "sha256": "8776f78ee5b41aa55d8f87c800538b51e31715d4a9508c30f73aced0750556d7"
+  },
+  {
+   "file": "source-serif-4-latin-700-normal.ttf",
+   "family": "Source Serif 4",
+   "weight": 700,
+   "style": "normal",
+   "license": "OFL-1.1",
+   "sha256": "be518d65f9119b441a1bdf9d2ca169e45c7ed33597774eb8b3fd201465831fc0"
+  }
+ ]
+}
