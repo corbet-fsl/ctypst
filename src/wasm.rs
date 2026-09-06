@@ -8,12 +8,12 @@
 //! [`CompiledDoc`] compiles once and renders many times: callers rendering
 //! several pages of one document pay exactly one compilation.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::sync::Arc;
 
 use wasm_bindgen::prelude::*;
 
-use crate::measure::{MeasureClient, MeasureFormat, MeasureItem};
+use crate::measure::{MeasureClient, MeasureFormat, MeasureItem, fnv1a64, fnv1a64_update};
 use crate::{CompileRequest, Engine};
 
 fn error(message: impl std::fmt::Display) -> JsValue {
@@ -43,7 +43,12 @@ pub struct Ctypst {
     engine: Arc<Engine>,
     overlays: Vec<(String, Overlay)>,
     measure: MeasureClient,
+    raw_hits: HashMap<u64, String>,
+    raw_order: VecDeque<u64>,
 }
+
+/// Bounded raw request cache: at most this many responses are retained.
+const RAW_CACHE_MAX: usize = 64;
 
 enum Overlay {
     Source(String),
@@ -71,6 +76,8 @@ impl Ctypst {
             engine,
             overlays: Vec::new(),
             measure,
+            raw_hits: HashMap::new(),
+            raw_order: VecDeque::new(),
         })
     }
 
@@ -110,7 +117,13 @@ impl Ctypst {
     /// Measure a JSON array of items with a JSON format object.
     ///
     /// Returns `{results, calibration}` or a string error. Never throws.
+    /// Byte-identical repeat requests skip parsing entirely and return the
+    /// retained response: the warm path is two hashes plus a map lookup.
     pub fn measure_all(&mut self, format_json: &str, items_json: &str) -> Result<String, JsValue> {
+        let key = fnv1a64_update(fnv1a64(format_json.as_bytes()), items_json.as_bytes());
+        if let Some(hit) = self.raw_hits.get(&key) {
+            return Ok(hit.clone());
+        }
         let format: MeasureFormat = serde_json::from_str(format_json)
             .map_err(|fault| error(format!("format is not a measure format: {fault}")))?;
         let items: Vec<MeasureItem> = serde_json::from_str(items_json)
@@ -120,11 +133,19 @@ impl Ctypst {
             .measure_all(&format, &items)
             .map_err(|fault| error(format!("measurement failed: {fault}")))?;
         let calibration = self.measure.calibration();
-        serde_json::to_string(&serde_json::json!({
+        let encoded = serde_json::to_string(&serde_json::json!({
             "results": results,
             "calibration": calibration,
         }))
-        .map_err(|fault| error(format!("cannot encode results: {fault}")))
+        .map_err(|fault| error(format!("cannot encode results: {fault}")))?;
+        if self.raw_hits.len() >= RAW_CACHE_MAX
+            && let Some(old) = self.raw_order.pop_front()
+        {
+            self.raw_hits.remove(&old);
+        }
+        self.raw_order.push_back(key);
+        self.raw_hits.insert(key, encoded.clone());
+        Ok(encoded)
     }
 
     /// Compile a source string with JSON inputs into a reusable document.

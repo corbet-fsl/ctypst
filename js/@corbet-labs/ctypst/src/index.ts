@@ -10,7 +10,7 @@ export {
     type MeasureCalibration,
     type MeasureResult,
     type RawResult,
-} from './protocol.js';
+} from './protocol.ts';
 export {
     CtypstMeasure,
     charBudget,
@@ -19,5 +19,5 @@ export {
     normalizeFormat,
     type MeasureCompiler,
     type MeasureWorld,
-} from './adapter.js';
-export { MEASURE_V1_TYP, MANIFEST_JSON, MANIFEST, FONT_FILES, PACKAGE_VERSION } from './generated/measure-asset.js';
+} from './adapter.ts';
+export { MEASURE_V1_TYP, MANIFEST_JSON, MANIFEST, FONT_FILES, PACKAGE_VERSION } from './generated/measure-asset.ts';

@@ -282,3 +282,16 @@ jobs:
           # package links this repo as a trusted publisher on npmjs.com.
           # Falls back to NPM_TOKEN when the link is not in place yet.
           npm publish --access public --provenance
+
+      - name: Publish the TypeScript API to JSR
+        shell: bash
+        working-directory: js/@corbet-labs/ctypst
+        run: |
+          # OIDC trusted publishing first (no secret; the package links this
+          # repo). The npx wrapper ignores JSR_TOKEN env, so the fallback
+          # passes the token as a flag (GitHub masks secrets in logs).
+          if npx -y jsr@2.6.7 publish; then
+            exit 0
+          fi
+          echo "OIDC publish failed, falling back to JSR_TOKEN"
+          npx -y jsr@2.6.7 publish --token "${{ secrets.JSR_TOKEN }}"

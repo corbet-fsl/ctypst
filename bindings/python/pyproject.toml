@@ -1,0 +1,25 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "ctypst"
+version = "0.3.1"
+description = "Embedded Typst measurement and rendering (ctypst for Python)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "FSL-1.1-ALv2"
+keywords = ["typst", "pdf", "rendering", "measurement"]
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+]
+
+[project.urls]
+repository = "https://github.com/corbet-labs/ctypst"
+
+[tool.maturin]
+bindings = "pyo3"
+features = ["pyo3/extension-module"]
+module-name = "ctypst._core"
+python-source = "python"

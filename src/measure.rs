@@ -284,11 +284,11 @@ pub fn leading_em(leading_value: f64, leading_relative: bool, base_font_size: f6
     }
 }
 
-const fn fnv1a64(bytes: &[u8]) -> u64 {
+pub(crate) const fn fnv1a64(bytes: &[u8]) -> u64 {
     fnv1a64_update(0xcbf2_9ce4_8422_2325_u64, bytes)
 }
 
-const fn fnv1a64_update(mut hash: u64, bytes: &[u8]) -> u64 {
+pub(crate) const fn fnv1a64_update(mut hash: u64, bytes: &[u8]) -> u64 {
     let mut index = 0;
     while index < bytes.len() {
         hash ^= bytes[index] as u64;

@@ -16,20 +16,23 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    },
     "./assets/measure-v1.typ": "./assets/measure-v1.typ",
     "./fonts/*": "./fonts/*",
     "./wasm/*": "./wasm/*"
   },
   "files": [
     "src/**/*",
+    "dist/**/*",
     "assets/**/*",
     "fonts/**/*",
-    "wasm/**/*",
     "README.md"
   ],
   "scripts": {
-    "prepack": "bash ./scripts/sync-assets.sh",
+    "prepack": "bash ./scripts/sync-assets.sh && ./node_modules/.bin/tsc -p ./tsconfig.emit.json",
     "conformance": "bun ./scripts/conformance.mts",
     "typecheck": "tsc --noEmit -p ./tsconfig.json"
   },

@@ -16,7 +16,7 @@ import {
     CtypstMeasure,
     type MeasureFormatInput,
     type MeasureItem,
-} from '../src/index.js';
+} from '../src/index.ts';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
 

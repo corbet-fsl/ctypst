@@ -1,0 +1,18 @@
+{
+  "name": "@corbet-labs/ctypst",
+  "version": "0.3.1",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "license": "FSL-1.1-ALv2",
+  "publish": {
+    "include": [
+      "jsr.json",
+      "README.md",
+      "src/**/*.ts"
+    ],
+    "exclude": [
+      "!src/generated/measure-asset.ts"
+    ]
+  }
+}

@@ -9,6 +9,7 @@ repository = "https://github.com/corbet-labs/ctypst"
 homepage = "https://github.com/corbet-labs/ctypst"
 documentation = "https://docs.rs/ctypst"
 readme = "README.md"
+exclude = ["bindings/"]
 keywords = ["typst", "pdf", "rendering", "documents"]
 categories = ["template-engine", "rendering"]
 publish = ["crates-io"]

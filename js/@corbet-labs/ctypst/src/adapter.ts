@@ -11,8 +11,7 @@
  * performs transport, validation, and caching around it. It never
  * reimplements measurement semantics in TypeScript.
  */
-import type { TypstCompiler } from '@myriaddreamin/typst.ts';
-import { MEASURE_V1_TYP, MANIFEST_JSON, PACKAGE_VERSION } from './generated/measure-asset.js';
+import { MEASURE_V1_TYP, MANIFEST_JSON, PACKAGE_VERSION } from './generated/measure-asset.ts';
 import {
     PROTOCOL_VERSION,
     QUERY_SELECTOR,
@@ -24,7 +23,7 @@ import {
     type MeasureResult,
     type NormalizedFormat,
     type RawResult,
-} from './protocol.js';
+} from './protocol.ts';
 
 /** Cache entry: validated result plus its canonical key inputs. */
 interface CachedResult extends MeasureResult {
@@ -138,8 +137,8 @@ export class CtypstMeasure {
     private compiles = 0;
 
     /** Build around an initialized Typst compiler (worker keeps its own). */
-    constructor(compiler: TypstCompiler) {
-        this.compiler = compiler as unknown as MeasureCompiler;
+    constructor(compiler: MeasureCompiler) {
+        this.compiler = compiler;
         this.manifestHash = fnv1a64Hex(MANIFEST_JSON);
         this.compiler.addSource(PROGRAM_PATH, MEASURE_V1_TYP);
     }
