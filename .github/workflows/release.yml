@@ -192,6 +192,11 @@ jobs:
 
       - name: Build WebAssembly artifacts
         shell: bash
+        env:
+          # Size-tuned codegen for the browser artifact only; native builds
+          # keep the workspace profile. Unwind tables stay: a trapped
+          # instance is unrecoverable, an unwound error is not.
+          RUSTFLAGS: "-C opt-level=z -C codegen-units=1"
         run: |
           rustup --verbose target add --toolchain "$RUST_TOOLCHAIN" wasm32-unknown-unknown
           bindgen="$(grep -A2 'name = "wasm-bindgen"' Cargo.lock | grep '^version' | head -n 1 | sed 's/version = "\(.*\)"/\1/')"
@@ -199,9 +204,21 @@ jobs:
           curl --fail --silent --show-error --location \
             "https://github.com/rustwasm/wasm-bindgen/releases/download/${bindgen}/wasm-bindgen-${bindgen}-x86_64-unknown-linux-musl.tar.gz" \
             | tar -xz -C "$RUNNER_TEMP"
+          curl --fail --silent --show-error --location \
+            "https://github.com/WebAssembly/binaryen/releases/download/version_124/binaryen-version_124-x86_64-linux.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP"
           cargo "+$RUST_TOOLCHAIN" build --locked --release \
             --target wasm32-unknown-unknown \
             --no-default-features --features wasm
+          "$RUNNER_TEMP/binaryen-version_124/bin/wasm-opt" \
+            --enable-bulk-memory --enable-nontrapping-float-to-int \
+            -Oz target/wasm32-unknown-unknown/release/ctypst.wasm \
+            -o target/wasm32-unknown-unknown/release/ctypst.opt.wasm
+          mv target/wasm32-unknown-unknown/release/ctypst.opt.wasm \
+            target/wasm32-unknown-unknown/release/ctypst.wasm
+          size="$(stat -c%s target/wasm32-unknown-unknown/release/ctypst.wasm)"
+          echo "optimized wasm bytes: $size"
+          test "$size" -lt 26214400 || { echo "wasm exceeds the 25 MiB distribution budget"; exit 1; }
           "$RUNNER_TEMP/wasm-bindgen-${bindgen}-x86_64-unknown-linux-musl/wasm-bindgen" \
             --target web --out-dir js/@corbet-labs/ctypst/wasm/web \
             target/wasm32-unknown-unknown/release/ctypst.wasm

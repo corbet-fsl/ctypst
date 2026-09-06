@@ -1,6 +1,6 @@
 {
   "name": "@corbet-labs/ctypst",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Shared Typst measurement: versioned protocol, Typst-WASM adapter, font manifest and assets. Mirrors the ctypst Rust crate release line.",
   "license": "FSL-1.1-ALv2",
   "publishConfig": {

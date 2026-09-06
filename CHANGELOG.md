@@ -3,6 +3,12 @@
 All notable changes to `ctypst` are documented here. The project follows
 Semantic Versioning.
 
+## 0.3.1 - 2026-09-06
+
+- Shrink the browser WebAssembly build by a quarter with size-tuned
+  codegen and `wasm-opt -Oz`; the release gates the artifact on a 25 MiB
+  distribution budget.
+
 ## 0.3.0 - 2026-09-05
 
 - Add per-page SVG export behind the `svg` Cargo feature.
