@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -143,12 +143,14 @@ impl FileResolver for VirtualFiles {
 #[derive(Default)]
 struct ReadBudget {
     paths: HashMap<PathBuf, usize>,
+    dependencies: BTreeSet<PathBuf>,
     bytes: usize,
 }
 
 impl ReadBudget {
     fn reset(&mut self) {
         self.paths.clear();
+        self.dependencies.clear();
         self.bytes = 0;
     }
 }
@@ -178,6 +180,31 @@ impl SafeFsResolver {
         Ok(())
     }
 
+    pub(crate) fn dependencies(&self) -> Result<Vec<PathBuf>> {
+        Ok(self
+            .budget
+            .lock()
+            .map_err(|_| Error::Poisoned)?
+            .dependencies
+            .iter()
+            .cloned()
+            .collect())
+    }
+
+    fn observe(&self, path: &Path) -> FileResult<()> {
+        let mut budget = self
+            .budget
+            .lock()
+            .map_err(|_| denied("filesystem budget lock is poisoned"))?;
+        // A file can contribute its lexical and canonical names. Keep failed
+        // reads bounded too, while retaining the first over-budget dependency.
+        if budget.dependencies.len() > self.limits.max_files.saturating_mul(2) {
+            return Err(denied("Typst compilation consulted too many paths"));
+        }
+        budget.dependencies.insert(path.to_path_buf());
+        Ok(())
+    }
+
     fn resolve_bytes(&self, id: FileId) -> FileResult<Vec<u8>> {
         if !matches!(id.root(), VirtualRoot::Project) {
             return Err(denied("Typst package imports are disabled"));
@@ -189,6 +216,7 @@ impl SafeFsResolver {
             .vpath()
             .realize(&self.root)
             .map_err(|_| denied("Typst path escapes the configured root"))?;
+        self.observe(&lexical)?;
         let path = lexical
             .canonicalize()
             .map_err(|error| FileError::from_io(error, &lexical))?;
@@ -197,6 +225,7 @@ impl SafeFsResolver {
                 "Typst path escapes the configured root through a link",
             ));
         }
+        self.observe(&path)?;
         let file = File::open(&path).map_err(|error| FileError::from_io(error, &path))?;
         let metadata = file
             .metadata()

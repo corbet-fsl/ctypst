@@ -10,7 +10,7 @@ your application needs:
 
 ```toml
 [dependencies]
-ctypst = { version = "0.1.1", default-features = false, features = ["document-fonts", "pdf"] }
+ctypst = { version = "0.3.2", default-features = false, features = ["document-fonts", "pdf"] }
 ```
 
 The default boundary is deliberately closed:
@@ -56,3 +56,15 @@ Feature flags keep consumers lean:
 
 The crate is pure Rust at runtime and tested on Linux, macOS, and Windows. It
 does not require a Typst installation or discover fonts from the host.
+
+`Engine::compile_tracked` returns a `CompileReport` containing the usual
+compilation `result` and its filesystem `dependencies`, including attempted
+reads when compilation fails. Watchers can follow transitive Typst imports,
+data and image reads without parsing source or guessing file extensions.
+Reports retain lexical paths and allowed canonical targets for symlink changes,
+and remain separate across cached or concurrent compilations. A failed path
+may be missing or point outside the permitted root; watchers must apply the
+same root boundary before reading it. Caller-supplied virtual files and font
+bytes remain the caller's own dependencies. Attempted-path reports contain at
+most twice `Limits::max_files` plus one final path for failure recovery; many
+symlink aliases can exhaust this budget even when sharing a canonical target.

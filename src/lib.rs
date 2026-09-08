@@ -22,7 +22,9 @@ mod svg;
 #[cfg(feature = "wasm")]
 pub mod wasm;
 
-pub use config::{CompileOutput, CompileRequest, DiagnosticsPolicy, Limits, PageConstraint};
+pub use config::{
+    CompileOutput, CompileReport, CompileRequest, DiagnosticsPolicy, Limits, PageConstraint,
+};
 pub use engine::{Engine, EngineBuilder};
 pub use error::{Error, Result};
 #[cfg(feature = "format")]

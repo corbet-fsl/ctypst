@@ -3,7 +3,11 @@
 All notable changes to `ctypst` are documented here. The project follows
 Semantic Versioning.
 
-## Unreleased
+## 0.3.2 - 2026-09-08
+
+- Add `Engine::compile_tracked` and `CompileReport` for per-compilation
+  filesystem dependencies, including failed reads and symlink names, without
+  changing the existing `compile` interface or document output.
 
 - Ship TypeScript declarations alongside sources so consumers typecheck
   without repository configuration, and publish the API to JSR.

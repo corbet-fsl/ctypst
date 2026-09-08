@@ -173,3 +173,22 @@ pub struct CompileOutput {
     /// Warnings retained when the request explicitly allows them.
     pub warnings: Vec<String>,
 }
+
+/// One compilation result together with the project files it consulted.
+///
+/// Dependencies include attempted reads that failed, so a watcher can recover
+/// when a missing file is created. Both lexical paths and allowed canonical
+/// targets are retained to detect symlink replacement. Virtual files and font
+/// bytes supplied by the caller have no filesystem dependency here.
+pub struct CompileReport {
+    /// The same success or error returned by [`crate::Engine::compile`].
+    pub result: crate::Result<CompileOutput>,
+    /// Sorted, unique absolute project paths consulted by this compilation.
+    ///
+    /// Paths can be missing or unreadable. Resolve them against the engine's
+    /// root before reading: a failed dependency can be an escaping symlink.
+    /// Observation is bounded to twice [`Limits::max_files`] plus one final
+    /// attempted path for recovery. Distinct symlink aliases consume this
+    /// observation budget even when they resolve to the same file.
+    pub dependencies: Vec<std::path::PathBuf>,
+}

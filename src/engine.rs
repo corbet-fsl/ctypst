@@ -6,7 +6,10 @@ use typst::text::Font;
 use typst_as_lib::TypstEngine;
 
 use crate::files::{SafeFsResolver, VirtualFiles};
-use crate::{CompileOutput, CompileRequest, DiagnosticsPolicy, Document, Error, Limits, Result};
+use crate::{
+    CompileOutput, CompileReport, CompileRequest, DiagnosticsPolicy, Document, Error, Limits,
+    Result,
+};
 
 /// Builder for a capability-limited embedded Typst engine.
 pub struct EngineBuilder {
@@ -185,7 +188,49 @@ impl Engine {
 
     /// Compile one request under the engine lock and enforce its contracts.
     pub fn compile(&self, request: CompileRequest) -> Result<CompileOutput> {
-        let _guard = self.compile_lock.lock().map_err(|_| Error::Poisoned)?;
+        self.compile_tracked(request).result
+    }
+
+    /// Compile and report filesystem dependencies, including on failure.
+    ///
+    /// The report is captured under the compilation lock, so concurrent callers
+    /// cannot mix dependency sets. Every call starts a fresh set, including when
+    /// Typst reuses memoized work. Caller-provided virtual files and fonts remain
+    /// the caller's responsibility to watch.
+    pub fn compile_tracked(&self, request: CompileRequest) -> CompileReport {
+        let Ok(_guard) = self.compile_lock.lock() else {
+            return CompileReport {
+                result: Err(Error::Poisoned),
+                dependencies: Vec::new(),
+            };
+        };
+        if let Some(resolver) = &self.fs_resolver
+            && let Err(error) = resolver.reset()
+        {
+            return CompileReport {
+                result: Err(error),
+                dependencies: Vec::new(),
+            };
+        }
+        let result = self.compile_request(request);
+        let dependencies = self
+            .fs_resolver
+            .as_ref()
+            .map(SafeFsResolver::dependencies)
+            .transpose();
+        match dependencies {
+            Ok(paths) => CompileReport {
+                result,
+                dependencies: paths.unwrap_or_default(),
+            },
+            Err(error) => CompileReport {
+                result: Err(error),
+                dependencies: Vec::new(),
+            },
+        }
+    }
+
+    fn compile_request(&self, request: CompileRequest) -> Result<CompileOutput> {
         Self::check_size(
             &request.source,
             "path bytes",
@@ -198,9 +243,6 @@ impl Engine {
             request.inputs.len(),
             self.limits.max_inputs,
         )?;
-        if let Some(resolver) = &self.fs_resolver {
-            resolver.reset()?;
-        }
         let input_bytes = request
             .inputs
             .iter()
