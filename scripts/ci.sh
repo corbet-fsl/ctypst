@@ -23,39 +23,39 @@ case ${CI_LINKER:-system} in
     exit 2
     ;;
 esac
-ci_toolchain=${CI_RUST_TOOLCHAIN:-1.92.0}
-ci_cargo=(cargo)
-ci_rustc=(rustc)
-if [[ $ci_toolchain != system ]]; then
-  ci_cargo+=("+$ci_toolchain")
-  ci_rustc+=("+$ci_toolchain")
-fi
+# Use the caller's installed compiler. GitHub Actions selects current stable
+# with RUSTUP_TOOLCHAIN; Crow supplies its already installed worker tools.
+rust_version() {
+  rustc --version --verbose
+  cargo --version
+}
 
 rust_quality() {
-  ci_package_files=$("${ci_cargo[@]}" package --locked --list)
+  rust_version
+  ci_package_files=$(cargo package --locked --list)
   if printf '%s\n' "$ci_package_files" | grep -E '(^|/)(node_modules|\.venv|__pycache__)/' >/dev/null; then
     printf 'Generated dependencies would enter the crate; use a clean source checkout.\n' >&2
     return 1
   fi
-  "${ci_rustc[@]}" --version
-  "${ci_cargo[@]}" fmt --check
-  "${ci_cargo[@]}" clippy --locked --all-targets --all-features -- -D warnings
-  "${ci_cargo[@]}" check --locked --no-default-features
+  cargo fmt --check
+  cargo clippy --locked --all-targets --all-features -- -D warnings
+  cargo check --locked --no-default-features
   for ci_feature in document-fonts format measure pdf raster svg wasm; do
-    "${ci_cargo[@]}" check --locked --no-default-features --features "$ci_feature"
+    cargo check --locked --no-default-features --features "$ci_feature"
   done
-  "${ci_cargo[@]}" publish --locked --dry-run
+  cargo publish --locked --dry-run
 }
 
 rust_tests() {
-  "${ci_rustc[@]}" --version
-  "${ci_cargo[@]}" test --locked --all-features
+  rust_version
+  cargo test --locked --all-features
 }
 
 python_checks() (
   cd "$ci_root/bindings/python"
-  "${ci_cargo[@]}" fmt --check
-  "${ci_cargo[@]}" clippy --locked --all-targets -- -D warnings
+  rust_version
+  cargo fmt --check
+  cargo clippy --locked --all-targets -- -D warnings
   ci_python=${CI_PYTHON:-python3}
   ci_venv=$(mktemp -d "${TMPDIR:-/tmp}/ctypst-python.XXXXXX")
   trap 'rm -rf -- "$ci_venv"' EXIT
@@ -63,9 +63,6 @@ python_checks() (
   uv pip install --python "$ci_venv/bin/python" 'maturin==1.15.0' 'pytest==9.1.1'
   source "$ci_venv/bin/activate"
   python --version
-  if [[ $ci_toolchain != system ]]; then
-    export RUSTUP_TOOLCHAIN=$ci_toolchain
-  fi
   maturin develop --locked
   pytest tests/ -q
 )

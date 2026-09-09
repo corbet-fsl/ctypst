@@ -19,8 +19,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_TOOLCHAIN: 1.92.0
-  CI_RUST_TOOLCHAIN: 1.92.0
+  RUSTUP_TOOLCHAIN: stable
 
 jobs:
   quality:
@@ -33,12 +32,13 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install exact Rust toolchain
+      - name: Install current stable Rust
         run: |
-          rustup toolchain install "$RUST_TOOLCHAIN" \
+          rustup toolchain install stable \
             --profile minimal \
             --component clippy,rustfmt
-          test "$(rustc "+$RUST_TOOLCHAIN" --version | awk '{print $2}')" = "$RUST_TOOLCHAIN"
+          rustc --version --verbose
+          cargo --version
 
       - name: Reuse compiled dependencies
         uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c
@@ -68,11 +68,12 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install exact Rust toolchain
+      - name: Install current stable Rust
         shell: bash
         run: |
-          rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal
-          test "$(rustc "+$RUST_TOOLCHAIN" --version | awk '{print $2}')" = "$RUST_TOOLCHAIN"
+          rustup toolchain install stable --profile minimal
+          rustc --version --verbose
+          cargo --version
 
       - name: Reuse compiled dependencies
         uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c
@@ -95,13 +96,14 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install exact Rust toolchain
+      - name: Install current stable Rust
         shell: bash
         run: |
-          rustup toolchain install "$RUST_TOOLCHAIN" \
+          rustup toolchain install stable \
             --profile minimal \
             --component clippy,rustfmt
-          test "$(rustc "+$RUST_TOOLCHAIN" --version | awk '{print $2}')" = "$RUST_TOOLCHAIN"
+          rustc --version --verbose
+          cargo --version
 
       - name: Install pinned Python with maturin
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5

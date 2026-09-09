@@ -22,7 +22,7 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
-  RUST_TOOLCHAIN: 1.92.0
+  RUSTUP_TOOLCHAIN: stable
 
 jobs:
   publish:
@@ -36,18 +36,19 @@ jobs:
           persist-credentials: false
           ref: ${{ env.RELEASE_TAG }}
 
-      - name: Install exact Rust toolchain
+      - name: Install current stable Rust
         run: |
-          rustup toolchain install "$RUST_TOOLCHAIN" \
+          rustup toolchain install stable \
             --profile minimal \
             --component clippy,rustfmt
-          test "$(rustc "+$RUST_TOOLCHAIN" --version | awk '{print $2}')" = "$RUST_TOOLCHAIN"
+          rustc --version --verbose
+          cargo --version
 
       - name: Verify release identity
         id: release
         shell: bash
         run: |
-          version="$(cargo "+$RUST_TOOLCHAIN" metadata --locked --no-deps --format-version 1 \
+          version="$(cargo metadata --locked --no-deps --format-version 1 \
             | jq -r '.packages[] | select(.name == "ctypst") | .version')"
           test -n "$version"
           test "$RELEASE_TAG" = "v$version"
@@ -55,10 +56,10 @@ jobs:
 
       - name: Verify source and package
         run: |
-          cargo "+$RUST_TOOLCHAIN" fmt --check
-          cargo "+$RUST_TOOLCHAIN" clippy --locked --all-targets --all-features -- -D warnings
-          cargo "+$RUST_TOOLCHAIN" test --locked --all-features
-          cargo "+$RUST_TOOLCHAIN" publish --locked --dry-run
+          cargo fmt --check
+          cargo clippy --locked --all-targets --all-features -- -D warnings
+          cargo test --locked --all-features
+          cargo publish --locked --dry-run
 
       - name: Detect an existing crates.io release
         id: registry
@@ -101,7 +102,7 @@ jobs:
         if: steps.registry.outputs.published == 'false' && steps.bootstrap.outputs.available == 'true'
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_BOOTSTRAP_TOKEN }}
-        run: cargo "+$RUST_TOOLCHAIN" publish --locked
+        run: cargo publish --locked
 
       - name: Ensure tokenless trusted publishing
         if: steps.bootstrap.outputs.available == 'true'
@@ -144,7 +145,7 @@ jobs:
         if: steps.registry.outputs.published == 'false' && steps.bootstrap.outputs.available == 'false'
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.trusted.outputs.token }}
-        run: cargo "+$RUST_TOOLCHAIN" publish --locked
+        run: cargo publish --locked
 
       - name: Wait for the crates.io index
         shell: bash
@@ -198,7 +199,7 @@ jobs:
           # instance is unrecoverable, an unwound error is not.
           RUSTFLAGS: "-C opt-level=z -C codegen-units=1"
         run: |
-          rustup --verbose target add --toolchain "$RUST_TOOLCHAIN" wasm32-unknown-unknown
+          rustup --verbose target add --toolchain stable wasm32-unknown-unknown
           bindgen="$(grep -A2 'name = "wasm-bindgen"' Cargo.lock | grep '^version' | head -n 1 | sed 's/version = "\(.*\)"/\1/')"
           test -n "$bindgen"
           curl --fail --silent --show-error --location \
@@ -207,7 +208,7 @@ jobs:
           curl --fail --silent --show-error --location \
             "https://github.com/WebAssembly/binaryen/releases/download/version_124/binaryen-version_124-x86_64-linux.tar.gz" \
             | tar -xz -C "$RUNNER_TEMP"
-          cargo "+$RUST_TOOLCHAIN" build --locked --release \
+          cargo build --locked --release \
             --target wasm32-unknown-unknown \
             --no-default-features --features wasm
           "$RUNNER_TEMP/binaryen-version_124/bin/wasm-opt" \

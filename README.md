@@ -70,18 +70,25 @@ most twice `Limits::max_files` plus one final path for failure recovery; many
 symlink aliases can exhaust this budget even when sharing a canonical target.
 
 Developer and CI checks share `bash scripts/ci.sh all`. Individual targets are
-`quality`, `test`, `python`, `javascript`, and `license`. The default Rust
-toolchain is 1.92.0; `CI_RUST_TOOLCHAIN=system` explicitly tests the installed
-compiler instead. Python checks need Python 3.11+ and uv; JavaScript checks use
+`quality`, `test`, `python`, `javascript`, and `license`. GitHub Actions is
+the preferred CI when available and selects current stable Rust, including
+Python and WebAssembly builds. `rust-toolchain.toml` selects the moving stable
+channel for rustup-based development. Shared commands use the caller's compiler
+and print its actual version; they do not run Rust installation commands. The Cargo
+`rust-version` field records minimum compatibility, not an exact compiler pin.
+Python checks need Python 3.11+ and uv; JavaScript checks use
 Bun 1.3.13 and the committed dependency lock. These commands never publish.
 JavaScript checks use a temporary source copy so installed dependencies and
 generated assets do not enter the Rust package. Rust quality checks reject
 package manifests containing dependency or virtual environment directories.
 
-The manual Crow `verify` workflow verifies a staged source archive against its
-commit and checksum, then runs the Linux checks with the worker's configured
-compiler budget and persistent caches. Native macOS/Windows tests and the pinned Rust toolchain
-remain separate GitHub Actions gates; a Crow Linux success does not prove them.
+The manual Crow `verify` workflow is the fallback when GitHub Actions is
+unavailable. It verifies a staged source archive against its commit and
+checksum, then runs the same Linux checks with the worker's installed compiler,
+configured resource budget, and persistent caches. Missing required Rust,
+Clippy, or rustfmt tools fail the selected checks without installing them.
+Native macOS/Windows tests remain GitHub Actions gates; a Crow Linux success
+does not prove them.
 Set Crow's optional `CHECK_TARGET` variable to an individual target for a
 focused rerun; it defaults to the locked Rust `test` target and rejects unknown
 targets. Select `all` deliberately for full release preparation. The `quality`
