@@ -5,6 +5,18 @@ set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 ci_root=$PWD
+case ${CI_LINKER:-system} in
+  system) ;;
+  mold)
+    mold --version
+    # Intercept linker execution without invalidating every Cargo fingerprint.
+    CI_LINKER=system exec mold --run bash "$ci_root/scripts/ci.sh" "$@"
+    ;;
+  *)
+    printf 'CI_LINKER must be system or mold.\n' >&2
+    exit 2
+    ;;
+esac
 ci_toolchain=${CI_RUST_TOOLCHAIN:-1.92.0}
 ci_cargo=(cargo)
 ci_rustc=(rustc)
@@ -14,6 +26,11 @@ if [[ $ci_toolchain != system ]]; then
 fi
 
 rust_quality() {
+  ci_package_files=$("${ci_cargo[@]}" package --locked --list)
+  if printf '%s\n' "$ci_package_files" | grep -E '(^|/)(node_modules|\.venv|__pycache__)/' >/dev/null; then
+    printf 'Generated dependencies would enter the crate; use a clean source checkout.\n' >&2
+    return 1
+  fi
   "${ci_rustc[@]}" --version
   "${ci_cargo[@]}" fmt --check
   "${ci_cargo[@]}" clippy --locked --all-targets --all-features -- -D warnings
@@ -48,6 +65,13 @@ python_checks() (
 )
 
 javascript_checks() (
+  # Keep generated assets and installed dependencies out of the source package.
+  ci_js_workspace=$(mktemp -d "${TMPDIR:-/tmp}/ctypst-javascript.XXXXXX")
+  trap 'rm -rf -- "$ci_js_workspace"' EXIT
+  tar --exclude=.git --exclude=target --exclude=node_modules --exclude=.venv \
+    --exclude=dist --exclude='*.tgz' --exclude="${ci_js_workspace##*/}" \
+    -cf - . | tar -C "$ci_js_workspace" -xf -
+  ci_root=$ci_js_workspace
   cd "$ci_root/js/@corbet-labs/ctypst"
   bun --version
   bun install --frozen-lockfile
@@ -60,16 +84,18 @@ import tomllib
 root = Path(sys.argv[1])
 version = tomllib.loads((root / "Cargo.toml").read_text())["package"]["version"]
 for path in ["js/@corbet-labs/ctypst/package.json", "js/@corbet-labs/ctypst/jsr.json"]:
-    assert json.loads((root / path).read_text())["version"] == version, path
+    if json.loads((root / path).read_text())["version"] != version:
+        raise SystemExit(f"{path} does not match crate version {version}")
 for path, table in [("bindings/python/Cargo.toml", "package"), ("bindings/python/pyproject.toml", "project")]:
-    assert tomllib.loads((root / path).read_text())[table]["version"] == version, path
+    if tomllib.loads((root / path).read_text())[table]["version"] != version:
+        raise SystemExit(f"{path} does not match crate version {version}")
 print(f"All package versions match {version}")
 PY
   bash scripts/sync-assets.sh
   bun ./node_modules/typescript/bin/tsc --noEmit -p tsconfig.json
   bun scripts/conformance.mts
-  ci_pack_dir=$(mktemp -d "${TMPDIR:-/tmp}/ctypst-js-pack.XXXXXX")
-  trap 'rm -rf -- "$ci_pack_dir"' EXIT
+  ci_pack_dir=$ci_js_workspace/packed
+  mkdir "$ci_pack_dir"
   bun pm pack --destination "$ci_pack_dir" >/dev/null
   test "$(tar tzf "$ci_pack_dir"/*.tgz | grep -c '\.ttf$')" = 16
 )
@@ -84,6 +110,6 @@ case ${1:-all} in
   python) python_checks ;;
   javascript) javascript_checks ;;
   license) license_checks ;;
-  all) license_checks; javascript_checks; rust_quality; rust_tests; python_checks ;;
+  all) license_checks; rust_quality; rust_tests; python_checks; javascript_checks ;;
   *) printf 'usage: bash scripts/ci.sh [all|quality|test|python|javascript|license]\n' >&2; exit 2 ;;
 esac

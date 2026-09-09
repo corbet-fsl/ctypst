@@ -13,9 +13,14 @@ exclude = ["bindings/"]
 keywords = ["typst", "pdf", "rendering", "documents"]
 categories = ["template-engine", "rendering"]
 publish = ["crates-io"]
+autotests = false
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+
+[[test]]
+name = "integration"
+path = "tests/integration.rs"
 
 [features]
 default = ["document-fonts", "format", "pdf", "raster"]

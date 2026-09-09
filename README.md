@@ -74,8 +74,19 @@ Developer and CI checks share `bash scripts/ci.sh all`. Individual targets are
 toolchain is 1.92.0; `CI_RUST_TOOLCHAIN=system` explicitly tests the installed
 compiler instead. Python checks need Python 3.11+ and uv; JavaScript checks use
 Bun 1.3.13 and the committed dependency lock. These commands never publish.
+JavaScript checks use a temporary source copy so installed dependencies and
+generated assets do not enter the Rust package. Rust quality checks reject
+package manifests containing dependency or virtual environment directories.
 
 The manual Crow `verify` workflow verifies a staged source archive against its
-commit and checksum, then runs the Linux checks with two compiler jobs and
-persistent caches. Native macOS/Windows tests and the pinned Rust toolchain
+commit and checksum, then runs the Linux checks with the worker's configured
+compiler budget and persistent caches. Native macOS/Windows tests and the pinned Rust toolchain
 remain separate GitHub Actions gates; a Crow Linux success does not prove them.
+Set Crow's optional `CHECK_TARGET` variable to an individual target for a
+focused rerun; it defaults to `all` and rejects unknown targets.
+`CI_LINKER=mold` opts into an already installed mold linker for a measured run;
+the default `system` keeps the toolchain's linker selection.
+The `.ci/ccid.toml` adapter exposes the same targets to the shared CI driver.
+Integration contracts share one test executable to avoid repeatedly linking
+the embedded compiler; their individual tests and the library unit tests remain
+independent checks.

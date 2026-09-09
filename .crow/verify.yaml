@@ -7,6 +7,12 @@ variables:
   SOURCE_SHA256:
     description: SHA256 of the exact staged archive
     default: ''
+  CHECK_TARGET:
+    description: Run all, quality, test, python, javascript, or license checks
+    default: all
+  CI_LINKER:
+    description: Select the installed system linker or opt in to mold
+    default: system
 when:
   - event: manual
 skip_clone: true
@@ -25,7 +31,6 @@ steps:
     depends_on: [verified-source]
     environment:
       CI_RUST_TOOLCHAIN: system
-      CARGO_BUILD_JOBS: "2"
       CARGO_TARGET_DIR: /workspaces/ci-caches/ctypst/target
       CARGO_PROFILE_DEV_DEBUG: "0"
       CARGO_PROFILE_TEST_DEBUG: "0"
@@ -34,4 +39,4 @@ steps:
       BUN_INSTALL_CACHE_DIR: /workspaces/ci-caches/ctypst/bun
     commands:
       - mkdir -p /workspaces/ci-caches/ctypst
-      - timeout --kill-after=30s 55m flock --timeout 60 /workspaces/ci-caches/ctypst/verify.lock bash scripts/ci.sh all
+      - timeout --kill-after=30s 55m flock --timeout 60 /workspaces/ci-caches/ctypst/verify.lock bash scripts/ci.sh "$CHECK_TARGET"
