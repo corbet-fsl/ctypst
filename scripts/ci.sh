@@ -8,9 +8,15 @@ ci_root=$PWD
 case ${CI_LINKER:-system} in
   system) ;;
   mold)
-    mold --version
+    ci_mold=$(command -v mold)
+    # Nix's linker wrapper prepends flags; -run must reach mold first.
+    ci_mold_origin=$(dirname "$(realpath "$ci_mold")")/../nix-support/orig-bintools
+    if [[ -f $ci_mold_origin ]]; then
+      ci_mold="$(<"$ci_mold_origin")/bin/mold"
+    fi
+    "$ci_mold" --version
     # Intercept linker execution without invalidating every Cargo fingerprint.
-    CI_LINKER=system exec mold --run bash "$ci_root/scripts/ci.sh" "$@"
+    CI_LINKER=system exec "$ci_mold" -run bash "$ci_root/scripts/ci.sh" "$@"
     ;;
   *)
     printf 'CI_LINKER must be system or mold.\n' >&2
