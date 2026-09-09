@@ -4,6 +4,8 @@ on:
   pull_request:
     paths-ignore: ["ARCHITECTURE.md", "CHANGELOG.md", "SECURITY.md"]
   push:
+    # Keep full native validation on release tags.
+    tags: ['v*.*.*']
     branches: [main]
     paths-ignore: ["ARCHITECTURE.md", "CHANGELOG.md", "SECURITY.md"]
   workflow_dispatch:
@@ -55,14 +57,9 @@ jobs:
     name: Test ${{ matrix.name }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - name: Linux
-            runner: ubuntu-24.04
-          - name: macOS
-            runner: macos-15
-          - name: Windows
-            runner: windows-2025
+      # macOS: manual/tag/release. Windows: main push plus manual/tag/release; PR uses Linux.
+      matrix: >-
+        ${{ fromJSON((github.event_name == 'workflow_dispatch' || github.event_name == 'release' || startsWith(github.ref, 'refs/tags/')) && '{"include":[{"name":"Linux","runner":"ubuntu-24.04"},{"name":"macOS","runner":"macos-15"},{"name":"Windows","runner":"windows-2025"}]}' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')) && '{"include":[{"name":"Linux","runner":"ubuntu-24.04"},{"name":"Windows","runner":"windows-2025"}]}' || '{"include":[{"name":"Linux","runner":"ubuntu-24.04"}]}') }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     steps:
