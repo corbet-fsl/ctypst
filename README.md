@@ -68,3 +68,14 @@ same root boundary before reading it. Caller-supplied virtual files and font
 bytes remain the caller's own dependencies. Attempted-path reports contain at
 most twice `Limits::max_files` plus one final path for failure recovery; many
 symlink aliases can exhaust this budget even when sharing a canonical target.
+
+Developer and CI checks share `bash scripts/ci.sh all`. Individual targets are
+`quality`, `test`, `python`, `javascript`, and `license`. The default Rust
+toolchain is 1.92.0; `CI_RUST_TOOLCHAIN=system` explicitly tests the installed
+compiler instead. Python checks need Python 3.11+ and uv; JavaScript checks use
+Bun 1.3.13 and the committed dependency lock. These commands never publish.
+
+The manual Crow `verify` workflow verifies a staged source archive against its
+commit and checksum, then runs the Linux checks with two compiler jobs and
+persistent caches. Native macOS/Windows tests and the pinned Rust toolchain
+remain separate GitHub Actions gates; a Crow Linux success does not prove them.
