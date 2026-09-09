@@ -86,7 +86,8 @@ Set Crow's optional `CHECK_TARGET` variable to an individual target for a
 focused rerun; it defaults to `all` and rejects unknown targets.
 `CI_LINKER=mold` opts into an already installed mold linker for a measured run;
 the default `system` keeps the toolchain's linker selection.
-The `.ci/ccid.toml` adapter exposes the same targets to the shared CI driver.
+Crow calls the pinned shared `ccid` driver through `.ci/ccid.toml`; the driver
+sets the allocated resources, project cache, lock, and timeout for these same targets.
 Integration contracts share one test executable to avoid repeatedly linking
 the embedded compiler; their individual tests and the library unit tests remain
 independent checks.
