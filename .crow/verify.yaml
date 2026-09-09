@@ -9,7 +9,7 @@ variables:
   CI_TOOL_SHA256: {default: ""}
   CI_TOOL_BINARY: {default: ""}
   CI_TOOL_BINARY_SHA256: {default: ""}
-  CHECK_TARGET: {default: "all"}
+  CHECK_TARGET: {default: "test"}
   CI_JOBS: {default: ""}
   CI_TEST_THREADS: {default: ""}
   CI_MEMORY_MB: {default: ""}

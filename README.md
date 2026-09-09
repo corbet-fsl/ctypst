@@ -83,7 +83,10 @@ commit and checksum, then runs the Linux checks with the worker's configured
 compiler budget and persistent caches. Native macOS/Windows tests and the pinned Rust toolchain
 remain separate GitHub Actions gates; a Crow Linux success does not prove them.
 Set Crow's optional `CHECK_TARGET` variable to an individual target for a
-focused rerun; it defaults to `all` and rejects unknown targets.
+focused rerun; it defaults to the locked Rust `test` target and rejects unknown
+targets. Select `all` deliberately for full release preparation. The `quality`
+target includes a Cargo publication dry run, while Python and license checks
+may resolve packages from their registries; those lanes are not offline checks.
 `CI_LINKER=mold` opts into an already installed mold linker for a measured run;
 the default `system` keeps the toolchain's linker selection.
 Crow calls the pinned shared `ccid` driver through `.ci/ccid.toml`; the driver
