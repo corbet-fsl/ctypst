@@ -24,3 +24,15 @@ commands = [["bash", "scripts/ci.sh", "javascript"]]
 [checks.license]
 kind = "commands"
 commands = [["bash", "scripts/ci.sh", "license"]]
+
+[checks.release-guards]
+kind = "commands"
+commands = [["bash", "scripts/ci.sh", "release-guards"]]
+
+[checks.release-prepare]
+kind = "commands"
+commands = [["bash", "scripts/release-stage.sh", "prepare"]]
+
+[checks.release-publish]
+kind = "commands"
+commands = [["bash", "scripts/release-stage.sh", "publish"]]

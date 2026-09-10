@@ -2,21 +2,19 @@ name: Release
 
 on:
   push:
-    tags:
-      - "v*.*.*"
+    tags: ["v*.*.*"]
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing release tag to finish or repair
+        description: Existing release tag to publish without overwriting artifacts
         required: true
         type: string
 
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 env:
@@ -25,274 +23,141 @@ env:
   RUSTUP_TOOLCHAIN: stable
 
 jobs:
-  publish:
-    name: Publish crate and GitHub release
+  prepare:
+    name: Verify and prepare immutable packages
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 60
+    outputs:
+      bundle-sha256: ${{ steps.bundle.outputs.sha256 }}
     steps:
-      - name: Check out tagged source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ env.RELEASE_TAG }}
 
-      - name: Install current stable Rust
+      - name: Require the shared release driver in the immutable tag
         run: |
-          rustup toolchain install stable \
-            --profile minimal \
-            --component clippy,rustfmt
-          rustc --version --verbose
-          cargo --version
-
-      - name: Verify release identity
-        id: release
-        shell: bash
-        run: |
-          version="$(cargo metadata --locked --no-deps --format-version 1 \
-            | jq -r '.packages[] | select(.name == "ctypst") | .version')"
-          test -n "$version"
-          test "$RELEASE_TAG" = "v$version"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-
-      - name: Verify source and package
-        run: |
-          cargo fmt --check
-          cargo clippy --locked --all-targets --all-features -- -D warnings
-          cargo test --locked --all-features
-          cargo publish --locked --dry-run
-
-      - name: Detect an existing crates.io release
-        id: registry
-        shell: bash
-        env:
-          VERSION: ${{ steps.release.outputs.version }}
-        run: |
-          status="$(curl --silent --show-error \
-            --output "$RUNNER_TEMP/crates-version.json" \
-            --write-out '%{http_code}' \
-            --header "User-Agent: ctypst-release ($GITHUB_SERVER_URL/$GITHUB_REPOSITORY)" \
-            "https://crates.io/api/v1/crates/ctypst/$VERSION")"
-          case "$status" in
-            200) echo "published=true" >> "$GITHUB_OUTPUT" ;;
-            404) echo "published=false" >> "$GITHUB_OUTPUT" ;;
-            *)
-              echo "Unexpected crates.io status: $status" >&2
-              exit 1
-              ;;
-          esac
-
-      - name: Detect one-time bootstrap credential
-        id: bootstrap
-        shell: bash
-        env:
-          CRATES_IO_BOOTSTRAP_TOKEN: ${{ secrets.CRATES_IO_BOOTSTRAP_TOKEN }}
-        run: |
-          if [[ -n "$CRATES_IO_BOOTSTRAP_TOKEN" ]]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
+          if [[ ! -f scripts/release.py ]]; then
+            echo 'This historic tag predates the shared release driver. Use the documented Crow Cargo artifact import; do not rewrite the tag.' >&2
+            exit 1
           fi
 
-      - name: Authenticate through trusted publishing
-        if: steps.registry.outputs.published == 'false' && steps.bootstrap.outputs.available == 'false'
-        id: trusted
-        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
-
-      - name: Publish first release with bootstrap credential
-        if: steps.registry.outputs.published == 'false' && steps.bootstrap.outputs.available == 'true'
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_BOOTSTRAP_TOKEN }}
-        run: cargo publish --locked
-
-      - name: Ensure tokenless trusted publishing
-        if: steps.bootstrap.outputs.available == 'true'
-        shell: bash
-        env:
-          CRATES_IO_BOOTSTRAP_TOKEN: ${{ secrets.CRATES_IO_BOOTSTRAP_TOKEN }}
+      - name: Install current stable Rust on the hosted runner
         run: |
-          configs="$(curl --fail-with-body --silent --show-error \
-            --header "Authorization: $CRATES_IO_BOOTSTRAP_TOKEN" \
-            --header "User-Agent: ctypst-release ($GITHUB_SERVER_URL/$GITHUB_REPOSITORY)" \
-            'https://crates.io/api/v1/trusted_publishing/github_configs?crate=ctypst')"
+          rustup toolchain install stable --profile minimal --component clippy,rustfmt
+          rustup target add --toolchain stable wasm32-unknown-unknown
 
-          if ! jq --exit-status '
-            any(.github_configs[];
-              .repository_owner == "corbet-labs" and
-              .repository_name == "ctypst" and
-              .workflow_filename == "release.yml" and
-              .environment == null)
-          ' <<<"$configs" >/dev/null; then
-            curl --fail-with-body --silent --show-error \
-              --request POST \
-              --header "Authorization: $CRATES_IO_BOOTSTRAP_TOKEN" \
-              --header "Content-Type: application/json" \
-              --header "User-Agent: ctypst-release ($GITHUB_SERVER_URL/$GITHUB_REPOSITORY)" \
-              --data '{"github_config":{"crate":"ctypst","repository_owner":"corbet-labs","repository_name":"ctypst","workflow_filename":"release.yml","environment":null}}' \
-              https://crates.io/api/v1/trusted_publishing/github_configs \
-              >/dev/null
-          fi
+      - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c
+        with:
+          shared-key: release-linux
 
-          curl --fail-with-body --silent --show-error \
-            --request PATCH \
-            --header "Authorization: $CRATES_IO_BOOTSTRAP_TOKEN" \
-            --header "Content-Type: application/json" \
-            --header "User-Agent: ctypst-release ($GITHUB_SERVER_URL/$GITHUB_REPOSITORY)" \
-            --data '{"crate":{"trustpub_only":true}}' \
-            https://crates.io/api/v1/crates/ctypst \
-            >/dev/null
-
-      - name: Publish through trusted publishing
-        if: steps.registry.outputs.published == 'false' && steps.bootstrap.outputs.available == 'false'
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ steps.trusted.outputs.token }}
-        run: cargo publish --locked
-
-      - name: Wait for the crates.io index
-        shell: bash
-        env:
-          VERSION: ${{ steps.release.outputs.version }}
-        run: |
-          for _ in {1..40}; do
-            if curl --fail --silent --show-error \
-              --header "User-Agent: ctypst-release ($GITHUB_SERVER_URL/$GITHUB_REPOSITORY)" \
-              "https://crates.io/api/v1/crates/ctypst/$VERSION" >/dev/null; then
-              exit 0
-            fi
-            sleep 3
-          done
-          echo "ctypst $VERSION did not appear on crates.io in time" >&2
-          exit 1
-
-      - name: Create GitHub release
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.release.outputs.version }}
-        run: |
-          awk -v heading="## $VERSION " '
-            index($0, heading) == 1 { in_release = 1; next }
-            in_release && /^## / { exit }
-            in_release { print }
-          ' CHANGELOG.md > release-notes.md
-          test -s release-notes.md
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release edit "$RELEASE_TAG" \
-              --title "ctypst $VERSION" \
-              --notes-file release-notes.md
-          else
-            gh release create "$RELEASE_TAG" \
-              --verify-tag \
-              --title "ctypst $VERSION" \
-              --notes-file release-notes.md
-          fi
-
-      - name: Install exact Bun release
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: 1.4.0
 
-      - name: Build WebAssembly artifacts
-        shell: bash
-        env:
-          # Size-tuned codegen for the browser artifact only; native builds
-          # keep the workspace profile. Unwind tables stay: a trapped
-          # instance is unrecoverable, an unwound error is not.
-          RUSTFLAGS: "-C opt-level=z -C codegen-units=1"
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: v2.x
+
+      - name: Install hosted WebAssembly packaging tools
         run: |
-          rustup --verbose target add --toolchain stable wasm32-unknown-unknown
-          bindgen="$(grep -A2 'name = "wasm-bindgen"' Cargo.lock | grep '^version' | head -n 1 | sed 's/version = "\(.*\)"/\1/')"
-          test -n "$bindgen"
+          bindgen="$(python3 - <<'PY'
+          import pathlib, tomllib
+          versions = {p['version'] for p in tomllib.loads(pathlib.Path('Cargo.lock').read_text())['package'] if p['name'] == 'wasm-bindgen'}
+          assert len(versions) == 1
+          print(versions.pop())
+          PY
+          )"
           curl --fail --silent --show-error --location \
             "https://github.com/rustwasm/wasm-bindgen/releases/download/${bindgen}/wasm-bindgen-${bindgen}-x86_64-unknown-linux-musl.tar.gz" \
-            | tar -xz -C "$RUNNER_TEMP"
+            --output "$RUNNER_TEMP/wasm-bindgen.tar.gz"
+          tar -xzf "$RUNNER_TEMP/wasm-bindgen.tar.gz" -C "$RUNNER_TEMP"
           curl --fail --silent --show-error --location \
-            "https://github.com/WebAssembly/binaryen/releases/download/version_124/binaryen-version_124-x86_64-linux.tar.gz" \
-            | tar -xz -C "$RUNNER_TEMP"
-          cargo build --locked --release \
-            --target wasm32-unknown-unknown \
-            --no-default-features --features wasm
-          "$RUNNER_TEMP/binaryen-version_124/bin/wasm-opt" \
-            --enable-bulk-memory --enable-nontrapping-float-to-int \
-            -Oz target/wasm32-unknown-unknown/release/ctypst.wasm \
-            -o target/wasm32-unknown-unknown/release/ctypst.opt.wasm
-          mv target/wasm32-unknown-unknown/release/ctypst.opt.wasm \
-            target/wasm32-unknown-unknown/release/ctypst.wasm
-          size="$(stat -c%s target/wasm32-unknown-unknown/release/ctypst.wasm)"
-          echo "optimized wasm bytes: $size"
-          test "$size" -lt 26214400 || { echo "wasm exceeds the 25 MiB distribution budget"; exit 1; }
-          "$RUNNER_TEMP/wasm-bindgen-${bindgen}-x86_64-unknown-linux-musl/wasm-bindgen" \
-            --target web --out-dir js/@corbet-labs/ctypst/wasm/web \
-            target/wasm32-unknown-unknown/release/ctypst.wasm
-          "$RUNNER_TEMP/wasm-bindgen-${bindgen}-x86_64-unknown-linux-musl/wasm-bindgen" \
-            --target nodejs --out-dir js/@corbet-labs/ctypst/wasm/nodejs \
-            target/wasm32-unknown-unknown/release/ctypst.wasm
-          ls js/@corbet-labs/ctypst/wasm/web js/@corbet-labs/ctypst/wasm/nodejs
+            https://github.com/WebAssembly/binaryen/releases/download/version_124/binaryen-version_124-x86_64-linux.tar.gz \
+            --output "$RUNNER_TEMP/binaryen.tar.gz"
+          tar -xzf "$RUNNER_TEMP/binaryen.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/wasm-bindgen-${bindgen}-x86_64-unknown-linux-musl" >> "$GITHUB_PATH"
+          echo "$RUNNER_TEMP/binaryen-version_124/bin" >> "$GITHUB_PATH"
 
-      - name: Smoke-test the packaged WebAssembly
-        shell: bash
-        working-directory: js/@corbet-labs/ctypst
-        run: |
-          bun install --frozen-lockfile
-          bun pm pack
-          rm -rf "$RUNNER_TEMP/wasm-smoke" && mkdir -p "$RUNNER_TEMP/wasm-smoke"
-          tar -xzf ./*.tgz -C "$RUNNER_TEMP/wasm-smoke"
-          cat > "$RUNNER_TEMP/wasm-smoke/smoke.mjs" <<'EOF'
-          import { Ctypst } from './package/wasm/nodejs/ctypst.js';
-          import { readFileSync } from 'node:fs';
-          const ct = new Ctypst();
-          const root = process.env.GITHUB_WORKSPACE;
-          const vectors = JSON.parse(readFileSync(`${root}/protocol/measure-v1/requests.json`, 'utf8'));
-          let items = 0;
-          for (const { request } of vectors.requests) {
-            const f = request.format;
-            const format = JSON.stringify({ font: f.font, baseFontSize: f.baseFontSize, entryHeadingSize: f.entryHeadingSize, leadingValue: f.leadingEm, leadingRelative: true, marginLeft: f.marginLeft, marginRight: f.marginRight, pageSize: f.pageSize });
-            const out = JSON.parse(ct.measure_all(format, JSON.stringify(request.items)));
-            items += out.results.length;
-            if (out.results.length !== request.items.length) throw new Error('result count mismatch');
-          }
-          const doc = ct.compile('#set text(font: "Archivo")\nsmoke', '{}');
-          if (doc.page_count() !== 1) throw new Error('page count mismatch');
-          if (!doc.svg_page(0).startsWith('<svg')) throw new Error('svg mismatch');
-          if (Buffer.from(doc.pdf().slice(0, 5)).toString() !== '%PDF-') throw new Error('pdf mismatch');
-          console.log('wasm smoke green:', items, 'items measured, svg+pdf export');
-          EOF
-          bun "$RUNNER_TEMP/wasm-smoke/smoke.mjs"
-
-      - name: Attach the JavaScript measurement package
-        shell: bash
+      - name: Run provider-independent preparation without publication credentials
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          cd js/@corbet-labs/ctypst
-          test "$(bun -p "require('./package.json').version")" = "${{ steps.release.outputs.version }}"
-          gh release upload "$RELEASE_TAG" ./*.tgz --clobber
+          RELEASE_ARTIFACT_DIR: ${{ runner.temp }}/ctypst-release
+        run: python3 scripts/release.py prepare all
 
-      - name: Install pinned Node.js for npm provenance
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - name: Freeze prepared package bundle
+        id: bundle
+        run: |
+          tar -C "$RUNNER_TEMP/ctypst-release" --exclude=release.lock -cf "$RUNNER_TEMP/ctypst-release.tar" .
+          sha256="$(sha256sum "$RUNNER_TEMP/ctypst-release.tar" | cut -d ' ' -f 1)"
+          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ctypst-release
+          path: ${{ runner.temp }}/ctypst-release.tar
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Publish verified packages
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ env.RELEASE_TAG }}
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ctypst-release
+          path: ${{ runner.temp }}
+
+      - name: Verify the package bundle from the preparation job
+        env:
+          EXPECTED_SHA256: ${{ needs.prepare.outputs.bundle-sha256 }}
+        run: |
+          printf '%s  %s\n' "$EXPECTED_SHA256" "$RUNNER_TEMP/ctypst-release.tar" | sha256sum --check --strict
+          mkdir "$RUNNER_TEMP/ctypst-release"
+          tar -xf "$RUNNER_TEMP/ctypst-release.tar" -C "$RUNNER_TEMP/ctypst-release"
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
-          registry-url: https://registry.npmjs.org/
 
-      - name: Publish the JavaScript package
-        shell: bash
-        working-directory: js/@corbet-labs/ctypst
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: v2.x
+
+      - name: Check for the exact existing Cargo package
+        id: registry
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          # Prefers trusted publishing (OIDC, no token): works once the
-          # package links this repo as a trusted publisher on npmjs.com.
-          # Falls back to NPM_TOKEN when the link is not in place yet.
-          npm publish --access public --provenance
+          RELEASE_ARTIFACT_DIR: ${{ runner.temp }}/ctypst-release
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/release.py status cargo
 
-      - name: Publish the TypeScript API to JSR
-        shell: bash
-        working-directory: js/@corbet-labs/ctypst
-        run: |
-          # OIDC trusted publishing first (no secret; the package links this
-          # repo). The npx wrapper ignores JSR_TOKEN env, so the fallback
-          # passes the token as a flag (GitHub masks secrets in logs).
-          if npx -y jsr@2.6.7 publish; then
-            exit 0
-          fi
-          echo "OIDC publish failed, falling back to JSR_TOKEN"
-          npx -y jsr@2.6.7 publish --token "${{ secrets.JSR_TOKEN }}"
+      - name: Authenticate through configured Cargo trusted publishing
+        if: steps.registry.outputs.published == 'false'
+        id: trusted
+        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+
+      - name: Publish exact packages without rebuilding or changing registry policy
+        env:
+          RELEASE_ARTIFACT_DIR: ${{ runner.temp }}/ctypst-release
+          RELEASE_CARGO_AUTH: trusted
+          CARGO_REGISTRY_TOKEN: ${{ steps.trusted.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/release.py publish all
+
+      - name: Retain publication journals even after a failed or ambiguous upload
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ctypst-publication-journals-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ctypst-release/publication
+          if-no-files-found: ignore
+          retention-days: 90

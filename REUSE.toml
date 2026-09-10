@@ -14,6 +14,7 @@ path = [
   "fonts/manifest.json",
   "LICENSE.md",
   "README.md",
+  "RELEASING.md",
   "SECURITY.md",
   "REUSE.toml",
   "rust-toolchain.toml",

@@ -101,3 +101,12 @@ sets the allocated resources, project cache, lock, and timeout for these same ta
 Integration contracts share one test executable to avoid repeatedly linking
 the embedded compiler; their individual tests and the library unit tests remain
 independent checks.
+
+Release preparation and publication also share provider-independent commands.
+The manual Crow `release` workflow provides Cargo/npm/JSR/GitHub fallback with
+separate preparation and credentialed publication stages, exact artifact
+verification and retained upload journals. See [RELEASING.md](RELEASING.md) for
+dispatch variables, worker tools, registry permissions and retained-artifact
+recovery. `bash scripts/ci.sh release-guards` checks this release plumbing
+without rebuilding Rust. Native-platform coverage and Python distribution
+remain separate requirements, described in that document.

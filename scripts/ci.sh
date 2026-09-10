@@ -61,6 +61,7 @@ python_checks() (
   trap 'rm -rf -- "$ci_venv"' EXIT
   uv venv --python "$ci_python" "$ci_venv"
   uv pip install --python "$ci_venv/bin/python" 'maturin==1.15.0' 'pytest==9.1.1'
+  # shellcheck source=/dev/null # The virtual environment creates this file.
   source "$ci_venv/bin/activate"
   python --version
   maturin develop --locked
@@ -74,11 +75,11 @@ javascript_checks() (
   tar --exclude=.git --exclude=target --exclude=node_modules --exclude=.venv \
     --exclude=dist --exclude='*.tgz' --exclude="${ci_js_workspace##*/}" \
     -cf - . | tar -C "$ci_js_workspace" -xf -
-  ci_root=$ci_js_workspace
-  cd "$ci_root/js/@corbet-labs/ctypst"
+  ci_js_root=$ci_js_workspace
+  cd "$ci_js_root/js/@corbet-labs/ctypst"
   bun --version
   bun install --frozen-lockfile
-  python3 - "$ci_root" <<'PY'
+  python3 - "$ci_js_root" <<'PY'
 import json
 from pathlib import Path
 import sys
@@ -104,15 +105,28 @@ PY
 )
 
 license_checks() {
-  uvx --from 'reuse[charset-normalizer]==6.0.0' reuse lint
+  # shellcheck source=scripts/existing-tool-path.sh
+  source "$ci_root/scripts/existing-tool-path.sh"
+  ctypst_use_existing_lint_tools reuse
+  reuse lint
 }
 
 case ${1:-all} in
+  release-guards)
+    # shellcheck source=scripts/existing-tool-path.sh
+    source "$ci_root/scripts/existing-tool-path.sh"
+    ctypst_use_existing_lint_tools
+    python3 -m unittest discover -s scripts -p 'test_release.py'
+    python3 scripts/release.py source
+    actionlint -shellcheck shellcheck .github/workflows/*.yml
+    shellcheck scripts/*.sh
+    reuse lint
+    ;;
   quality) rust_quality ;;
   test) rust_tests ;;
   python) python_checks ;;
   javascript) javascript_checks ;;
   license) license_checks ;;
   all) license_checks; rust_quality; rust_tests; python_checks; javascript_checks ;;
-  *) printf 'usage: bash scripts/ci.sh [all|quality|test|python|javascript|license]\n' >&2; exit 2 ;;
+  *) printf 'usage: bash scripts/ci.sh [all|quality|test|python|javascript|license|release-guards]\n' >&2; exit 2 ;;
 esac
