@@ -76,7 +76,6 @@ steps:
       - evaluate: 'RELEASE_STAGE in ["all", "publish"] && RELEASE_COMPONENT == "cargo"'
     environment:
       <<: *ccid-environment
-      GH_TOKEN: {from_secret: ctypst_github_token}
       RELEASE_CARGO_AUTH: token
       CARGO_REGISTRY_TOKEN: {from_secret: ctypst_cargo_token}
     commands: &publish-commands

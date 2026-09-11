@@ -55,7 +55,8 @@ Configure these repository secrets for **manual events only**, scoped to ctypst:
 | `ctypst_github_token` | `GH_TOKEN` |
 
 Crow selects steps before resolving secrets. `RELEASE_STAGE=prepare` needs no
-publication credentials. Cargo publication requires GitHub and Cargo tokens;
+publication credentials. Cargo publication requires only its Cargo token;
+its immutable public tag is verified through the public GitHub API.
 JavaScript requires GitHub, npm and JSR tokens; `all` requires all four. Invalid
 selectors fail in an unconditional validation step. This lets preparation and
 individual components run when unrelated registry credentials are absent.
@@ -107,6 +108,10 @@ source and records the reviewed tag discrepancy.
 
 The retained 0.3.2 crate produced by `330f235` and the historic `v0.3.2` tag at
 `2d0b5c8` are distinct. Recovery is **Cargo-only** through this explicit import.
+The reviewed archive hashes, original producing commit, unchanged tag and
+successful Crow checks are recorded in
+[the retained import receipt](.ci/release-imports/ctypst-0.3.2.json). Supply that
+file and its SHA-256 as the import receipt when reusing those exact bytes.
 It cannot be combined into `publish all` with newly built JavaScript from a
 different tag identity. The historical tag also predates the shared release
 driver, so the current GHA workflow cannot execute that driver after checking

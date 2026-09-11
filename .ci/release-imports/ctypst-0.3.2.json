@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "version": "0.3.2",
+  "producing_commit": "330f2353bc8e918213096a5f2f7c34d8ec178921",
+  "tag_commit": "2d0b5c87f25e5dd5eea292401a75e082ae1bff37",
+  "crate_sha256": "4a889cef6aa63f62505dfb8b862a28e4191ed86913b5b4ed229e7d93e673193c",
+  "crate_bytes": 695236,
+  "source_sha256": "17afbedf4988c5ab6df5e553d304312d1e26361453368bbc60d074f77d4e27b1",
+  "checks_passed": true,
+  "evidence": [
+    {
+      "provider": "crow",
+      "repository": "corbet-labs/ctypst",
+      "run": 10,
+      "step": 21639,
+      "source_commit": "330f2353bc8e918213096a5f2f7c34d8ec178921",
+      "checks": ["all-features library unit test", "27 integration tests"],
+      "log_sha256": "c6348657ae79f5b2e109c178e440fc047b9de5e5e065d40189ce3d586f5fa155"
+    },
+    {
+      "provider": "crow",
+      "repository": "corbet-labs/ctypst",
+      "run": 11,
+      "step": 21669,
+      "source_commit": "330f2353bc8e918213096a5f2f7c34d8ec178921",
+      "checks": ["format", "all-target all-feature Clippy", "no-default and individual features", "locked Cargo publication dry run"],
+      "log_sha256": "4a921a42a85e59083c138f176b3960f323d350866a14c8d2ededf4f05e84eda1"
+    }
+  ],
+  "runtime": {"rustc": "1.97.1", "cargo": "1.97.0", "platform": "x86_64-unknown-linux-gnu"},
+  "provenance_note": "The archive was produced from the stated main commit. The older v0.3.2 tag is retained unchanged and is not the archive's producing commit."
+}

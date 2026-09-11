@@ -467,7 +467,7 @@ class CrowReleaseSelection(unittest.TestCase):
         return selected
 
     def test_selected_steps_need_only_the_selected_component_secrets(self):
-        credentials = {"cargo": {"ctypst_github_token", "ctypst_cargo_token"},
+        credentials = {"cargo": {"ctypst_cargo_token"},
                        "javascript": {"ctypst_github_token", "ctypst_npm_token", "ctypst_jsr_token"},
                        "all": {"ctypst_github_token", "ctypst_cargo_token", "ctypst_npm_token", "ctypst_jsr_token"}}
         for stage in ("prepare", "publish", "all"):
