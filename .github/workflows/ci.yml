@@ -41,7 +41,7 @@ jobs:
           cargo --version
 
       - name: Reuse compiled dependencies
-        uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
           shared-key: quality-linux
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -76,7 +76,7 @@ jobs:
           cargo --version
 
       - name: Reuse compiled dependencies
-        uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
           shared-key: tests-${{ runner.os }}
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -115,7 +115,7 @@ jobs:
         run: python -m pip install 'uv==0.12.5'
 
       - name: Reuse compiled binding dependencies
-        uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
           workspaces: bindings/python -> target
           shared-key: python-linux
