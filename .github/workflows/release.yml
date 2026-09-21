@@ -91,7 +91,7 @@ jobs:
           sha256="$(sha256sum "$RUNNER_TEMP/ctypst-release.tar" | cut -d ' ' -f 1)"
           echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ctypst-release
           path: ${{ runner.temp }}/ctypst-release.tar
@@ -155,7 +155,7 @@ jobs:
 
       - name: Retain publication journals even after a failed or ambiguous upload
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ctypst-publication-journals-${{ github.run_attempt }}
           path: ${{ runner.temp }}/ctypst-release/publication
