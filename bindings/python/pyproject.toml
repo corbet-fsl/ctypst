@@ -16,7 +16,7 @@ classifiers = [
 ]
 
 [project.urls]
-repository = "https://github.com/corbet-labs/ctypst"
+repository = "https://github.com/corbet-libs/ctypst"
 
 [tool.maturin]
 bindings = "pyo3"

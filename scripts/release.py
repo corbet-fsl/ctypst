@@ -26,7 +26,7 @@ import urllib.parse
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-REPOSITORY = "corbet-labs/ctypst"
+REPOSITORY = "corbet-libs/ctypst"
 CRATES = "https://crates.io/api/v1"
 GITHUB = "https://api.github.com"
 TOKENS = ("CARGO_REGISTRY_TOKEN", "NPM_TOKEN", "NODE_AUTH_TOKEN", "JSR_TOKEN", "GH_TOKEN")

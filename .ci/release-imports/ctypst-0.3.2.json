@@ -10,7 +10,7 @@
   "evidence": [
     {
       "provider": "crow",
-      "repository": "corbet-labs/ctypst",
+      "repository": "corbet-libs/ctypst",
       "run": 10,
       "step": 21639,
       "source_commit": "330f2353bc8e918213096a5f2f7c34d8ec178921",
@@ -19,7 +19,7 @@
     },
     {
       "provider": "crow",
-      "repository": "corbet-labs/ctypst",
+      "repository": "corbet-libs/ctypst",
       "run": 11,
       "step": 21669,
       "source_commit": "330f2353bc8e918213096a5f2f7c34d8ec178921",

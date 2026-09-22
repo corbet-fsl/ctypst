@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/corbet-labs/ctypst/protocol/measure-v1/schema.json",
+  "$id": "https://github.com/corbet-libs/ctypst/protocol/measure-v1/schema.json",
   "title": "ctypst-measure-v1 request and result envelope",
   "description": "Immutable contract for the one shared Typst measurement program. A behavior change creates ctypst-measure-v2; implementation and performance changes that preserve the vectors remain v1-compatible.",
   "type": "object",
