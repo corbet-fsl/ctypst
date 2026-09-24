@@ -127,6 +127,11 @@ An existing journal with missing or uncertain remote results prohibits another
 upload. A later invocation reconciles the same journal read-only first. Nothing
 overwrites a registry version, edits release notes or clobbers an asset.
 
+Publication order is Cargo, JSR, npm, then the GitHub release. npm runs last
+among the registries so that an npm failure (for example while its trusted
+publishing rule is still missing) cannot block Cargo or JSR; the run then fails
+and the GitHub release waits until npm is reconciled.
+
 GitHub release creation uses a draft. Asset inventories and downloaded bytes are
 verified before making it public; a published release with missing/extra assets
 is refused without alteration. Public downloads are then verified again.

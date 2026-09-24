@@ -490,7 +490,9 @@ def remote_javascript(directory, identity, manifest, registry):
 
 def publish_javascript(directory, identity):
     manifest = load_component(directory, identity, "javascript")
-    for registry in ("npm", "jsr"):
+    # JSR before npm: npm trusted-publishing rules are not configured yet, so an
+    # npm authentication failure must not prevent the JSR publication.
+    for registry in ("jsr", "npm"):
         if remote_javascript(directory, identity, manifest, registry):
             print(f"{registry} already contains the exact prepared package")
             continue
@@ -554,7 +556,7 @@ def publish_github(directory, identity):
     verify_tag(manifests, identity, token)
     # This is the complete release, after all registries have been verified.
     require(remote_cargo(directory, identity, manifests[0]), "Cargo publication remains incomplete")
-    for registry in ("npm", "jsr"):
+    for registry in ("jsr", "npm"):
         require(remote_javascript(directory, identity, manifests[1], registry), f"{registry} publication remains incomplete")
     lines = (ROOT / "CHANGELOG.md").read_text().splitlines()
     heading = next((index for index, line in enumerate(lines) if line.startswith("## " + identity["version"] + " ")), None)
@@ -653,7 +655,7 @@ def main():
                     cargo_authorization()
                 if "javascript" in components:
                     javascript = manifests[components.index("javascript")]
-                    for registry, tool, credential in (("npm", "npm", "NPM_TOKEN"), ("jsr", "deno", "JSR_TOKEN")):
+                    for registry, tool, credential in (("jsr", "deno", "JSR_TOKEN"), ("npm", "npm", "NPM_TOKEN")):
                         if not remote_javascript(directory, identity, javascript, registry):
                             require(shutil.which(tool), f"Provisioned {tool} is required")
                             require(os.environ.get(credential) or os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL"), f"{registry} authentication is unavailable")
