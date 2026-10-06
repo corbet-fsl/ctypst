@@ -8,22 +8,28 @@ commands = [["bash", "scripts/ci.sh", "all"]]
 [checks.quality]
 kind = "commands"
 commands = [["bash", "scripts/ci.sh", "quality"]]
+cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["python3", "--version"], ["bun", "--version"], ["reuse", "--version"], ["nix", "--version"]]
 
 [checks.test]
 kind = "commands"
 commands = [["bash", "scripts/ci.sh", "test"]]
+cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["python3", "--version"], ["bun", "--version"], ["reuse", "--version"], ["nix", "--version"]]
 
 [checks.python]
 kind = "commands"
 commands = [["bash", "scripts/ci.sh", "python"]]
+cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["python3", "--version"], ["bun", "--version"], ["uv", "--version"], ["reuse", "--version"], ["nix", "--version"]]
+cache_env = ["CI_PYTHON"]
 
 [checks.javascript]
 kind = "commands"
 commands = [["bash", "scripts/ci.sh", "javascript"]]
+cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["python3", "--version"], ["bun", "--version"], ["reuse", "--version"], ["nix", "--version"]]
 
 [checks.license]
 kind = "commands"
 commands = [["bash", "scripts/ci.sh", "license"]]
+cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["python3", "--version"], ["bun", "--version"], ["reuse", "--version"], ["nix", "--version"]]
 
 [checks.release-guards]
 kind = "commands"
@@ -36,3 +42,23 @@ commands = [["bash", "scripts/release-stage.sh", "prepare"]]
 [checks.release-publish]
 kind = "commands"
 commands = [["bash", "scripts/release-stage.sh", "publish"]]
+
+# All Linux verification gates are covered by the checks above (ci.yml runs
+# quality/test/python/javascript on ubuntu-24.04 via scripts/ci.sh; license
+# via reuse). commands kind is required: scripts/ci.sh needs package-list
+# cleanliness, clippy --all-targets --all-features, per-feature check matrix,
+# publish dry-run, maturin/pytest venv, bun/tsc/conformance/pack, reuse lint.
+# cache_tools pins the tool identities each script arm resolves
+# (rustc/cargo/python3/bun/reuse/nix, plus uv on python); maturin/pytest pins
+# live in scripts/ci.sh. jobs.verify is the Linux verify subset;
+# release-guards, release-prepare, release-publish are release gates, kept
+# defined but separate.
+
+[render]
+tool_revision = "77a5ac18542750de020ebf753d22c3200530282b"
+
+[jobs.verify]
+scheduler = "crow"
+checks = ["quality", "test", "python", "javascript", "license"]
+workflow = "repository-jobs"
+command = ["bash", ".ci/run-cached.sh"]

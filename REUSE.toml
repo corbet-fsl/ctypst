@@ -6,6 +6,7 @@ path = [
   ".crow/**",
   ".ci/**",
   ".gitignore",
+  ".prototools",
   "ARCHITECTURE.md",
   "CHANGELOG.md",
   "Cargo.lock",
