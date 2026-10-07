@@ -21,8 +21,6 @@ exec 9>"$state/lock"
 flock -w "${CI_TIMEOUT:-2700}" 9
 mkdir -p "$state/moon-cache/hashes" "$state/moon-cache/outputs" "$state/moon-home"
 mkdir -p .moon/cache
-ln -s "$state/moon-cache/hashes" .moon/cache/hashes
-ln -s "$state/moon-cache/outputs" .moon/cache/outputs
 export RUNNER_TEMP="${RUNNER_TEMP:-$(mktemp -d)}"
 # Tool installation is an explicit part of this job, in persistent CI storage.
 # Pinned nixpkgs b7c2ada (narHash-pinned): bun 1.3.13 matches

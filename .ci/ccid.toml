@@ -3,32 +3,32 @@ project = "ctypst"
 
 [checks.all]
 kind = "commands"
-commands = [["bash", "scripts/ci.sh", "all"]]
+commands = [["bash", "-c", "exec 2>&1; exec bash scripts/ci.sh all"]]
 
 [checks.quality]
 kind = "commands"
-commands = [["bash", "scripts/ci.sh", "quality"]]
+commands = [["bash", "-c", "exec 2>&1; exec bash scripts/ci.sh quality"]]
 cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["python3", "--version"], ["bun", "--version"], ["reuse", "--version"], ["nix", "--version"]]
 
 [checks.test]
 kind = "commands"
-commands = [["bash", "scripts/ci.sh", "test"]]
+commands = [["bash", "-c", "exec 2>&1; exec bash scripts/ci.sh test"]]
 cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["python3", "--version"], ["bun", "--version"], ["reuse", "--version"], ["nix", "--version"]]
 
 [checks.python]
 kind = "commands"
-commands = [["bash", "scripts/ci.sh", "python"]]
+commands = [["bash", "-c", "exec 2>&1; exec bash scripts/ci.sh python"]]
 cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["python3", "--version"], ["bun", "--version"], ["uv", "--version"], ["reuse", "--version"], ["nix", "--version"]]
 cache_env = ["CI_PYTHON"]
 
 [checks.javascript]
 kind = "commands"
-commands = [["bash", "scripts/ci.sh", "javascript"]]
+commands = [["bash", "-c", "exec 2>&1; exec bash scripts/ci.sh javascript"]]
 cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["python3", "--version"], ["bun", "--version"], ["reuse", "--version"], ["nix", "--version"]]
 
 [checks.license]
 kind = "commands"
-commands = [["bash", "scripts/ci.sh", "license"]]
+commands = [["bash", "-c", "exec 2>&1; exec bash scripts/ci.sh license"]]
 cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["python3", "--version"], ["bun", "--version"], ["reuse", "--version"], ["nix", "--version"]]
 
 [checks.release-guards]
@@ -55,7 +55,7 @@ commands = [["bash", "scripts/release-stage.sh", "publish"]]
 # defined but separate.
 
 [render]
-tool_revision = "77a5ac18542750de020ebf753d22c3200530282b"
+tool_revision = "972722d4e488b6fb49a5971d91720c47f30484d6"
 
 [jobs.verify]
 scheduler = "crow"
