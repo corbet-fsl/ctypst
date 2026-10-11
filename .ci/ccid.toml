@@ -55,7 +55,7 @@ commands = [["bash", "scripts/release-stage.sh", "publish"]]
 # defined but separate.
 
 [render]
-tool_revision = "972722d4e488b6fb49a5971d91720c47f30484d6"
+tool_revision = "78a4e05b4e1cb25aaeba3966951564d74277bcbd"
 
 [jobs.verify]
 scheduler = "crow"
