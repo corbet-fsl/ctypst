@@ -3,6 +3,16 @@
 All notable changes to `ctypst` are documented here. The project follows
 Semantic Versioning.
 
+## 0.3.3 - 2026-10-31
+
+- Add `EngineBuilder::package` to register an exact
+  `@namespace/name:version` Typst package from application-supplied files.
+  Registered packages resolve offline from memory, including their
+  `typst.toml` entrypoint and binary assets; their manifest, normalized paths,
+  and existing path, file, and total byte limits are checked at build time.
+  Unregistered packages and versions remain rejected and nothing is
+  downloaded.
+
 ## 0.3.2 - 2026-09-08
 
 - Add `Engine::compile_tracked` and `CompileReport` for per-compilation

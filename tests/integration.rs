@@ -4,4 +4,5 @@ mod dependencies;
 mod engine;
 mod manifest;
 mod measure;
+mod packages;
 mod svg;

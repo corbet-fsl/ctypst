@@ -10,14 +10,16 @@ your application needs:
 
 ```toml
 [dependencies]
-ctypst = { version = "0.3.2", default-features = false, features = ["document-fonts", "pdf"] }
+ctypst = { version = "0.3.3", default-features = false, features = ["document-fonts", "pdf"] }
 ```
 
 The default boundary is deliberately closed:
 
 - no Typst executable, system fonts, package downloads, shell, or network;
 - filesystem imports stay below one canonical root, including through links;
-- Typst package imports are rejected;
+- Typst package imports are rejected unless the application registers that
+  exact package version's files with `EngineBuilder::package`; registered
+  packages are served from memory and nothing is ever downloaded;
 - warnings fail compilation unless a caller explicitly accepts them;
 - paths, sources, assets, fonts, inputs, pages, PDFs, and rasters have finite limits;
 - request-scoped file overrides are compiled atomically and then rolled back;
@@ -44,6 +46,39 @@ let output = engine.compile(
 )?;
 
 let pdf = engine.pdf(&output.document, 0)?;
+# Ok::<(), ctypst::Error>(())
+```
+
+Templates can import a published Typst package without network access when
+the application supplies its files. A package is identified by its complete
+`@namespace/name:version` spec; its `typst.toml` must name the same package
+and version and an entrypoint among the supplied files. Paths are
+package-relative and normalized, and the usual path, file, and total byte
+limits apply when the engine is built. Every other package or version is
+still rejected with an error naming its spec.
+
+```rust
+use ctypst::{CompileRequest, Engine, fonts};
+
+let engine = Engine::builder()
+    .fonts(fonts::documents())
+    .package(
+        "@preview/cgrade:0.1.3",
+        [
+            (
+                "typst.toml",
+                "[package]\nname = \"cgrade\"\nversion = \"0.1.3\"\nentrypoint = \"typst/grade.typ\"\n",
+            ),
+            ("typst/grade.typ", "#let format-grade(grade) = [Note #grade]\n"),
+        ],
+    )?
+    .source(
+        "main.typ",
+        "#import \"@preview/cgrade:0.1.3\": format-grade\n#set text(font: \"Archivo\")\n#format-grade(\"1,7\")",
+    )?
+    .build()?;
+
+let output = engine.compile(CompileRequest::new("main.typ"))?;
 # Ok::<(), ctypst::Error>(())
 ```
 

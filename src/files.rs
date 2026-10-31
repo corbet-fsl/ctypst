@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use typst::diag::{FileError, FileResult};
 use typst::foundations::Bytes;
+use typst::syntax::package::{PackageManifest, PackageSpec};
 use typst::syntax::{FileId, RootedPath, Source, VirtualPath, VirtualRoot};
 use typst_as_lib::file_resolver::FileResolver;
 
@@ -26,6 +27,172 @@ fn not_found(id: FileId) -> FileError {
     FileError::NotFound(id.vpath().get_without_slash().into())
 }
 
+pub(crate) fn invalid_package(
+    subject: impl std::fmt::Display,
+    reason: impl std::fmt::Display,
+) -> Error {
+    Error::InvalidVirtualPath(format!("{subject}: {reason}"))
+}
+
+/// Package-relative paths and bytes of one application-supplied Typst package.
+pub(crate) type PackageFileList = Vec<(String, Vec<u8>)>;
+
+/// Validate one package before it is registered and return its parsed spec.
+///
+/// Paths must already be normalized and package-relative, so no two names can
+/// reach the same file and none can leave the package root. The manifest must
+/// describe exactly this spec and name a supplied entrypoint, as Typst would
+/// otherwise only discover a mismatch while importing.
+pub(crate) fn check_package(
+    spec: &str,
+    files: &[(String, Vec<u8>)],
+    limits: Limits,
+) -> Result<PackageSpec> {
+    let parsed = spec
+        .parse::<PackageSpec>()
+        .map_err(|reason| invalid_package(spec, reason))?;
+    check_limit(
+        parsed.to_string(),
+        "package file count",
+        files.len(),
+        limits.max_files,
+    )?;
+    let mut paths = BTreeSet::new();
+    let mut bytes = 0_usize;
+    for (path, data) in files {
+        let resource = format!("{parsed}/{path}");
+        check_limit(&resource, "path bytes", path.len(), limits.max_path_bytes)?;
+        check_limit(&resource, "file bytes", data.len(), limits.max_file_bytes)?;
+        let contained = VirtualPath::new(path).is_ok_and(|normalized| {
+            !normalized.is_root() && normalized.get_without_slash() == path
+        });
+        if !contained {
+            return Err(invalid_package(
+                &resource,
+                "package paths must be normalized, relative, and contained",
+            ));
+        }
+        if !paths.insert(path.as_str()) {
+            return Err(invalid_package(&resource, "package file is supplied twice"));
+        }
+        bytes = bytes.saturating_add(data.len());
+        check_limit(
+            parsed.to_string(),
+            "package data bytes",
+            bytes,
+            limits.max_total_bytes,
+        )?;
+    }
+    let manifest_path = format!("{parsed}/typst.toml");
+    let manifest = files
+        .iter()
+        .find_map(|(path, data)| (path == "typst.toml").then_some(data))
+        .ok_or_else(|| invalid_package(&manifest_path, "package manifest is missing"))?;
+    let manifest = std::str::from_utf8(manifest)
+        .map_err(|_| invalid_package(&manifest_path, "package manifest is not UTF-8"))?;
+    let manifest = toml::from_str::<PackageManifest>(manifest).map_err(|error| {
+        invalid_package(
+            &manifest_path,
+            format!("package manifest is malformed ({})", error.message()),
+        )
+    })?;
+    manifest
+        .validate(&parsed)
+        .map_err(|reason| invalid_package(&manifest_path, reason))?;
+    // Typst resolves the entrypoint relative to the manifest at the root.
+    let entrypoint = VirtualPath::new(manifest.package.entrypoint.as_str())
+        .map_err(|reason| invalid_package(&manifest_path, reason))?;
+    if !paths.contains(entrypoint.get_without_slash()) {
+        return Err(invalid_package(
+            &manifest_path,
+            format!(
+                "package entrypoint `{}` is not a supplied file",
+                manifest.package.entrypoint
+            ),
+        ));
+    }
+    Ok(parsed)
+}
+
+#[derive(Default)]
+struct PackageSet {
+    specs: HashSet<PackageSpec>,
+    files: HashMap<FileId, Bytes>,
+}
+
+/// Immutable in-memory Typst packages registered by the application.
+///
+/// Lookups are keyed by interned file IDs; nothing iterates the maps, so their
+/// order cannot reach diagnostics or documents.
+#[derive(Clone, Default)]
+pub(crate) struct Packages {
+    set: Arc<PackageSet>,
+}
+
+impl Packages {
+    pub(crate) fn new(
+        packages: impl IntoIterator<Item = (String, PackageFileList)>,
+        limits: Limits,
+    ) -> Result<Self> {
+        let mut set = PackageSet::default();
+        let mut bytes = 0_usize;
+        for (spec, files) in packages {
+            let parsed = check_package(&spec, &files, limits)?;
+            if set.specs.contains(&parsed) {
+                return Err(invalid_package(&parsed, "package is already registered"));
+            }
+            check_limit(
+                "registered packages",
+                "package file count",
+                set.files.len().saturating_add(files.len()),
+                limits.max_files,
+            )?;
+            bytes = files
+                .iter()
+                .map(|(_, data)| data.len())
+                .fold(bytes, usize::saturating_add);
+            check_limit(
+                "registered packages",
+                "package data bytes",
+                bytes,
+                limits.max_total_bytes,
+            )?;
+            for (path, data) in files {
+                let virtual_path =
+                    VirtualPath::new(&path).map_err(|reason| invalid_package(&parsed, reason))?;
+                let id =
+                    RootedPath::new(VirtualRoot::Package(parsed.clone()), virtual_path).intern();
+                set.files.insert(id, Bytes::new(data));
+            }
+            set.specs.insert(parsed);
+        }
+        Ok(Self { set: Arc::new(set) })
+    }
+
+    fn resolve_binary(&self, spec: &PackageSpec, id: FileId) -> FileResult<Bytes> {
+        if !self.set.specs.contains(spec) {
+            return Err(denied(format!(
+                "Typst package {spec} is not registered with this engine; \
+                 package downloads are disabled"
+            )));
+        }
+        self.set
+            .files
+            .get(&id)
+            .cloned()
+            .ok_or_else(|| not_found(id))
+    }
+
+    fn resolve_source(&self, spec: &PackageSpec, id: FileId) -> FileResult<Source> {
+        let bytes = self.resolve_binary(spec, id)?;
+        let source = std::str::from_utf8(&bytes).map_err(|_| FileError::InvalidUtf8)?;
+        Ok(Source::new(
+            id,
+            source.trim_start_matches('\u{feff}').to_owned(),
+        ))
+    }
+}
+
 #[derive(Clone, Default)]
 pub(crate) struct VirtualFileSet {
     sources: HashMap<FileId, Source>,
@@ -36,13 +203,15 @@ pub(crate) struct VirtualFileSet {
 #[derive(Clone)]
 pub(crate) struct VirtualFiles {
     files: Arc<RwLock<VirtualFileSet>>,
+    packages: Packages,
     limits: Limits,
 }
 
 impl VirtualFiles {
-    pub(crate) fn new(limits: Limits) -> Self {
+    pub(crate) fn new(limits: Limits, packages: Packages) -> Self {
         Self {
             files: Arc::default(),
+            packages,
             limits,
         }
     }
@@ -112,8 +281,8 @@ impl VirtualFiles {
 
 impl FileResolver for VirtualFiles {
     fn resolve_binary(&self, id: FileId) -> FileResult<Cow<'_, Bytes>> {
-        if !matches!(id.root(), VirtualRoot::Project) {
-            return Err(denied("Typst package imports are disabled"));
+        if let VirtualRoot::Package(spec) = id.root() {
+            return self.packages.resolve_binary(spec, id).map(Cow::Owned);
         }
         self.files
             .read()
@@ -126,8 +295,8 @@ impl FileResolver for VirtualFiles {
     }
 
     fn resolve_source(&self, id: FileId) -> FileResult<Cow<'_, Source>> {
-        if !matches!(id.root(), VirtualRoot::Project) {
-            return Err(denied("Typst package imports are disabled"));
+        if let VirtualRoot::Package(spec) = id.root() {
+            return self.packages.resolve_source(spec, id).map(Cow::Owned);
         }
         self.files
             .read()
@@ -158,18 +327,20 @@ impl ReadBudget {
 #[derive(Clone)]
 pub(crate) struct SafeFsResolver {
     root: PathBuf,
+    packages: Packages,
     limits: Limits,
     budget: Arc<Mutex<ReadBudget>>,
 }
 
 impl SafeFsResolver {
-    pub(crate) fn new(root: &Path, limits: Limits) -> Result<Self> {
+    pub(crate) fn new(root: &Path, limits: Limits, packages: Packages) -> Result<Self> {
         let root = root.canonicalize().map_err(|source| Error::InvalidRoot {
             path: root.to_path_buf(),
             source,
         })?;
         Ok(Self {
             root,
+            packages,
             limits,
             budget: Arc::default(),
         })
@@ -207,7 +378,7 @@ impl SafeFsResolver {
 
     fn resolve_bytes(&self, id: FileId) -> FileResult<Vec<u8>> {
         if !matches!(id.root(), VirtualRoot::Project) {
-            return Err(denied("Typst package imports are disabled"));
+            return Err(denied("Typst package paths never reach the filesystem"));
         }
         if id.vpath().get_without_slash().len() > self.limits.max_path_bytes {
             return Err(denied("Typst path exceeds its byte limit"));
@@ -274,12 +445,20 @@ impl SafeFsResolver {
     }
 }
 
+// Typst reports the last resolver's error, so package roots answer identically
+// here and never fall through to the filesystem.
 impl FileResolver for SafeFsResolver {
     fn resolve_binary(&self, id: FileId) -> FileResult<Cow<'_, Bytes>> {
+        if let VirtualRoot::Package(spec) = id.root() {
+            return self.packages.resolve_binary(spec, id).map(Cow::Owned);
+        }
         self.resolve_bytes(id).map(Bytes::new).map(Cow::Owned)
     }
 
     fn resolve_source(&self, id: FileId) -> FileResult<Cow<'_, Source>> {
+        if let VirtualRoot::Package(spec) = id.root() {
+            return self.packages.resolve_source(spec, id).map(Cow::Owned);
+        }
         let bytes = self.resolve_bytes(id)?;
         let source = std::str::from_utf8(&bytes).map_err(|_| FileError::InvalidUtf8)?;
         Ok(Cow::Owned(Source::new(

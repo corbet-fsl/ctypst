@@ -5,13 +5,15 @@ use crate::Document;
 /// Finite resource limits applied to every engine.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Limits {
-    /// Maximum UTF-8 byte length of a virtual or requested path.
+    /// Maximum UTF-8 byte length of a virtual, package, or requested path.
     pub max_path_bytes: usize,
-    /// Maximum number of virtual or filesystem files in one namespace or compile.
+    /// Maximum number of virtual, package, or filesystem files in one namespace
+    /// or compile. Registered packages share one namespace.
     pub max_files: usize,
     /// Maximum bytes read from or supplied for one file.
     pub max_file_bytes: usize,
-    /// Maximum aggregate bytes across virtual files or one filesystem compile.
+    /// Maximum aggregate bytes across virtual files, registered packages, or one
+    /// filesystem compile.
     pub max_total_bytes: usize,
     /// Maximum number of supplied font files and parsed font faces.
     pub max_fonts: usize,

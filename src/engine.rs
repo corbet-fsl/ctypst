@@ -5,7 +5,9 @@ use typst::foundations::{Bytes, Dict, IntoValue};
 use typst::text::Font;
 use typst_as_lib::TypstEngine;
 
-use crate::files::{SafeFsResolver, VirtualFiles};
+use crate::files::{
+    PackageFileList, Packages, SafeFsResolver, VirtualFiles, check_package, invalid_package,
+};
 use crate::{
     CompileOutput, CompileReport, CompileRequest, DiagnosticsPolicy, Document, Error, Limits,
     Result,
@@ -17,6 +19,7 @@ pub struct EngineBuilder {
     fonts: Vec<Vec<u8>>,
     sources: Vec<(String, String)>,
     binaries: Vec<(String, Vec<u8>)>,
+    packages: Vec<(String, PackageFileList)>,
     limits: Limits,
     cache_age: usize,
 }
@@ -28,6 +31,7 @@ impl Default for EngineBuilder {
             fonts: Vec::new(),
             sources: Vec::new(),
             binaries: Vec::new(),
+            packages: Vec::new(),
             limits: Limits::default(),
             cache_age: 2,
         }
@@ -58,7 +62,7 @@ impl EngineBuilder {
     pub fn source(mut self, path: impl Into<String>, source: impl Into<String>) -> Result<Self> {
         let path = path.into();
         let source = source.into();
-        let probe = VirtualFiles::new(self.limits);
+        let probe = VirtualFiles::new(self.limits, Packages::default());
         let _ = probe.apply_updates([(path.clone(), source.clone())], [])?;
         self.sources.push((path, source));
         Ok(self)
@@ -68,9 +72,34 @@ impl EngineBuilder {
     pub fn binary(mut self, path: impl Into<String>, binary: impl Into<Vec<u8>>) -> Result<Self> {
         let path = path.into();
         let binary = binary.into();
-        let probe = VirtualFiles::new(self.limits);
+        let probe = VirtualFiles::new(self.limits, Packages::default());
         let _ = probe.apply_updates([], [(path.clone(), binary.clone())])?;
         self.binaries.push((path, binary));
+        Ok(self)
+    }
+
+    /// Register the files of one Typst package for offline imports.
+    ///
+    /// `spec` is the full `@namespace/name:version` that templates import.
+    /// Paths are package-relative, such as `typst.toml` or `src/lib.typ`, and
+    /// the package's `typst.toml` must name this spec and a supplied
+    /// entrypoint. Registered files are served from memory; any other package
+    /// or version remains unavailable, and nothing is ever downloaded.
+    pub fn package<I, P, B>(mut self, spec: &str, files: I) -> Result<Self>
+    where
+        I: IntoIterator<Item = (P, B)>,
+        P: Into<String>,
+        B: Into<Vec<u8>>,
+    {
+        let files = files
+            .into_iter()
+            .map(|(path, data)| (path.into(), data.into()))
+            .collect::<Vec<_>>();
+        let parsed = check_package(spec, &files, self.limits)?.to_string();
+        if self.packages.iter().any(|(known, _)| *known == parsed) {
+            return Err(invalid_package(parsed, "package is already registered"));
+        }
+        self.packages.push((parsed, files));
         Ok(self)
     }
 
@@ -129,12 +158,13 @@ impl EngineBuilder {
         if parsed_fonts.is_empty() {
             return Err(Error::NoValidFont);
         }
-        let virtual_files = VirtualFiles::new(self.limits);
+        let packages = Packages::new(self.packages, self.limits)?;
+        let virtual_files = VirtualFiles::new(self.limits, packages.clone());
         let _ = virtual_files.apply_updates(self.sources, self.binaries)?;
         let fs_resolver = self
             .root
             .as_deref()
-            .map(|root| SafeFsResolver::new(root, self.limits))
+            .map(|root| SafeFsResolver::new(root, self.limits, packages))
             .transpose()?;
         let mut builder = TypstEngine::builder()
             .fonts(parsed_fonts)
