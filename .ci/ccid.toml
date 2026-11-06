@@ -55,8 +55,7 @@ commands = [["bash", "scripts/release-stage.sh", "publish"]]
 # defined but separate.
 
 [render]
-tool_revision = "10a28f64c3bb63dfade833dd219cba0f504c9345"
-tool_sha256 = "fe74ddd559238d99c9fad0655468edebac57be6031156ccbc09e35fb88959243"
+render_schema = 2
 [jobs.verify]
 scheduler = "forgejo"
 runs_on = "heavy"
