@@ -55,8 +55,8 @@ commands = [["bash", "scripts/release-stage.sh", "publish"]]
 # defined but separate.
 
 [render]
-tool_revision = "bd9aff07073185fb0a3503bab331aedefb6d8fd2"
-tool_sha256 = "38c0eadf2a2adb406f83c7d4892bc01a0a10b95671e1e671358e43a257bb5d23"
+tool_revision = "10a28f64c3bb63dfade833dd219cba0f504c9345"
+tool_sha256 = "fe74ddd559238d99c9fad0655468edebac57be6031156ccbc09e35fb88959243"
 [jobs.verify]
 scheduler = "forgejo"
 runs_on = "heavy"
@@ -64,3 +64,17 @@ checks = ["quality", "test", "python", "javascript", "license"]
 workflow = "ci"
 command = ["bash", ".ci/run-cached.sh"]
 events = ["manual"]
+
+# Native Windows evidence that no owned worker can produce: the GitLab mirror's own pipeline
+# (.gitlab-ci.yml, `scripts/ci.sh test` on a hosted Windows runner), dispatched by the remote CI
+# broker and reported back as the commit status "remote / windows". At most one branch run per
+# 72 h when one of the paths changed, plus every release tag.
+[jobs.windows]
+scheduler = "remote"
+provider = "gitlab"
+platform = "windows-x64"
+workflow = "ccid-remote"
+checks = ["test"]
+push_branches = ["main"]
+paths = ["src/**", "crates/**", "tests/**", "build.rs", "Cargo.toml", "Cargo.lock", "scripts/ci.sh", ".gitlab-ci.yml"]
+timeout_minutes = 90
