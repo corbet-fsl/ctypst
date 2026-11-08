@@ -1,13 +1,8 @@
 name: CI
 
 on:
-  pull_request:
-    paths-ignore: ["ARCHITECTURE.md", "CHANGELOG.md", "SECURITY.md"]
   push:
-    # Keep full native validation on release tags.
     tags: ['v*.*.*']
-    branches: [main]
-    paths-ignore: ["ARCHITECTURE.md", "CHANGELOG.md", "SECURITY.md"]
   workflow_dispatch:
 
 permissions:
