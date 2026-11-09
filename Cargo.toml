@@ -16,7 +16,7 @@ publish = ["crates-io"]
 autotests = false
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [[test]]
 name = "integration"

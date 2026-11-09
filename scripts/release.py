@@ -323,7 +323,7 @@ def prepare_javascript(directory, identity):
         run(["bun", "scripts/conformance.mts"], cwd=package)
         env = os.environ.copy()
         env["RUSTFLAGS"] = "-C opt-level=z -C codegen-units=1"
-        run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "--no-default-features", "--features", "wasm"], env=env)
+        run(["cargo", "rustc", "--locked", "--release", "--target", "wasm32-unknown-unknown", "--no-default-features", "--features", "wasm", "--crate-type", "cdylib"], env=env)
         target = Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target"))
         wasm = target / "wasm32-unknown-unknown/release/ctypst.wasm"
         optimized = stage / "ctypst.wasm"
