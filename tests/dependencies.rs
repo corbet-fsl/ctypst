@@ -119,7 +119,7 @@ fn virtual_files_do_not_watch_shadowed_disk_files() {
             .binary_file("data.md", b"Virtual".to_vec()),
     );
     assert!(report.result.is_ok());
-    assert!(report.dependencies.is_empty());
+    assert_eq!(report.dependencies, [] as [std::path::PathBuf; 0]);
 }
 
 #[test]

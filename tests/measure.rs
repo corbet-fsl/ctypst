@@ -195,11 +195,9 @@ fn invalid_requests_fail_loudly() {
     let format = fixture_format();
     let mut bad_item = fixture_item("x");
     let mut client = client();
-    assert!(
-        client
-            .measure_all(&format, &[])
-            .expect("empty is fine")
-            .is_empty()
+    assert_eq!(
+        client.measure_all(&format, &[]).expect("empty is fine"),
+        [] as [ctypst::measure::MeasureResult; 0]
     );
     assert_eq!(client.compile_count(), 0, "empty request never compiles");
 
