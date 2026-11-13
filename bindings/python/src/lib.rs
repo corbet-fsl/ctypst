@@ -4,6 +4,10 @@
 //! `ValueError` for invalid requests and `RuntimeError` for engine
 //! failures.
 
+// pyo3's macros expand `from_py_object` into a `.clone()` of a Copy type, and the module function
+// must be named `_core` (the extension module's name): both trip lints the generated code owns.
+#![allow(clippy::clone_on_copy, clippy::used_underscore_items)]
+
 use std::collections::HashMap;
 
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
