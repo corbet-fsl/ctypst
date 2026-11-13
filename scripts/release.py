@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Prepare immutable ctypst packages, then publish those same bytes.
+"""Prepare the immutable ctypst packages of a release (the crate and the Wasm npm package).
 
-The provider supplies authentication, committed source and resource admission.
-This command never installs tools or changes registry publishing policy.
+The release run (`ccid release build`, .ci/release-build.sh) calls this; publication is the
+platform publisher's, from the release's files. This command never installs tools.
 """
 import argparse
 import contextlib
@@ -14,21 +14,14 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
-import struct
 import subprocess
 import sys
 import tarfile
 import tempfile
-import time
 import tomllib
-import urllib.error
-import urllib.parse
-import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY = "corbet-libs/ctypst"
-CRATES = "https://crates.io/api/v1"
-GITHUB = "https://api.github.com"
 TOKENS = ("CARGO_REGISTRY_TOKEN", "NPM_TOKEN", "NODE_AUTH_TOKEN", "JSR_TOKEN", "GH_TOKEN")
 
 
@@ -365,265 +358,9 @@ def prepare_javascript(directory, identity):
                "artifacts": {path.name: digest(path.read_bytes()) for path in (npm_target, jsr_target)}})
 
 
-class NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, request, response, code, message, headers, new_url):
-        return None
-
-
-def request(url, *, token=None, method="GET", data=None, missing=False, binary=False):
-    headers = {"User-Agent": "ctypst-release (https://github.com/" + REPOSITORY + ")", "Cache-Control": "no-cache"}
-    if binary and url.startswith(f"{GITHUB}/repos/{REPOSITORY}/releases/assets/"):
-        headers["Accept"] = "application/octet-stream"
-    if token:
-        origin = urllib.parse.urlsplit(url).netloc
-        require(origin in ("crates.io", "api.github.com", "uploads.github.com"), "Refusing credential delivery to an unexpected host")
-        headers["Authorization"] = token if origin == "crates.io" else "Bearer " + token
-    if data is not None:
-        headers["Content-Type"] = "application/octet-stream" if isinstance(data, bytes) else "application/json"
-    payload = data if isinstance(data, bytes) else json.dumps(data).encode() if data is not None else None
-    opener = urllib.request.build_opener(NoRedirect()) if token else urllib.request.build_opener()
-    try:
-        with opener.open(urllib.request.Request(url, data=payload, headers=headers, method=method), timeout=60) as response:
-            body = response.read(200_000_001)
-            require(len(body) <= 200_000_000, "Remote artifact exceeds size limit")
-            return body if binary else json.loads(body)
-    except urllib.error.HTTPError as error:
-        if error.code == 302 and method == "GET" and binary and token and url.startswith(f"{GITHUB}/repos/{REPOSITORY}/releases/assets/"):
-            location = error.headers.get("Location", "")
-            parsed = urllib.parse.urlsplit(location)
-            require(parsed.scheme == "https" and parsed.netloc.endswith(".githubusercontent.com"), "Unexpected GitHub artifact download origin")
-            # Authentication is never forwarded across the download redirect.
-            return request(location, binary=True)
-        if error.code == 404 and missing and method == "GET":
-            return None
-        raise Failure(f"{method} {urllib.parse.urlsplit(url).netloc} returned HTTP {error.code}; no retry attempted") from None
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
-        raise Failure("Remote response is unavailable or ambiguous; reconcile without repeating a mutation") from None
-
-
-def remote_cargo(directory, identity, manifest):
-    version = identity["version"]
-    result = request(f"{CRATES}/crates/ctypst/{version}", missing=True)
-    if result is None:
-        return False
-    filename = f"ctypst-{version}.crate"
-    require(result["version"].get("yanked") is False, "Published crate is yanked")
-    content = request(f"https://static.crates.io/crates/ctypst/{filename}", binary=True)
-    require(digest(content) == manifest["artifacts"][filename], "Existing crates.io bytes differ from the prepared artifact")
-    return True
-
-
-def mutation(directory, name, identity, expected, verify, upload):
-    journal = directory / "publication" / (name + ".json")
-    record = {**stable_identity(identity), "destination": name, "expected": expected}
-    if journal.exists():
-        prior = read_json(journal)
-        require(all(prior.get(key) == value for key, value in record.items()), "Publication journal belongs to another artifact")
-        require(verify(), "A prior publication attempt is unresolved; inspect the destination without another upload")
-        write_json(journal, {**record, "status": "verified"})
-        return
-    if verify():
-        write_json(journal, {**record, "status": "verified"})
-        return
-    # Persist intent before the irreversible operation, including failure or
-    # lost responses. No later invocation repeats this operation blindly.
-    write_json(journal, {**record, "status": "attempted"})
-    upload()
-    for attempt in range(10):
-        if verify():
-            break
-        if attempt == 9:
-            raise Failure("Upload sent; registry visibility is pending. Reconcile this same journal; do not upload again")
-        time.sleep(2)
-    write_json(journal, {**record, "status": "verified"})
-
-
-def cargo_authorization():
-    token = os.environ.get("CARGO_REGISTRY_TOKEN", "")
-    require(token, "CARGO_REGISTRY_TOKEN is required for an unpublished crate")
-    mode = os.environ.get("RELEASE_CARGO_AUTH", "token")
-    require(mode in ("token", "trusted"), "RELEASE_CARGO_AUTH must be token or trusted")
-    if mode == "token":
-        crate = request(f"{CRATES}/crates/ctypst", token=token)["crate"]
-        require(crate.get("trustpub_only") is False, "ctypst has trusted-publishing-only enabled: Crow token publication is unavailable until the operator configures compatible registry permissions; this command never changes that setting")
-    return token
-
-
-def publish_cargo(directory, identity):
-    manifest = load_component(directory, identity, "cargo")
-    if remote_cargo(directory, identity, manifest):
-        print("crates.io already contains the exact prepared crate")
-        return
-    token = cargo_authorization()
-    archive = directory / f"ctypst-{identity['version']}.crate"
-    metadata = json.dumps(crate_metadata(archive_files(archive, f"ctypst-{identity['version']}/"), identity["version"]), separators=(",", ":")).encode()
-    content = archive.read_bytes()
-    payload = struct.pack("<I", len(metadata)) + metadata + struct.pack("<I", len(content)) + content
-    mutation(directory, "cargo", identity, manifest["artifacts"],
-             lambda: remote_cargo(directory, identity, manifest),
-             lambda: request(f"{CRATES}/crates/new", token=token, method="PUT", data=payload))
-
-
-def remote_javascript(directory, identity, manifest, registry):
-    version = identity["version"]
-    if registry == "npm":
-        result = request(f"https://registry.npmjs.org/@corbet-labs%2Fctypst/{version}", missing=True)
-        if result is None:
-            return False
-        require(result["name"] == "@corbet-labs/ctypst" and result["version"] == version, "Unexpected npm release identity")
-        url = result["dist"]["tarball"]
-        require(url.startswith("https://registry.npmjs.org/@corbet-labs/ctypst/-/"), "Unexpected npm download origin")
-        expected = next(value for name, value in manifest["artifacts"].items() if name.endswith(".tgz"))
-        require(digest(request(url, binary=True)) == expected, "Existing npm archive differs from prepared bytes")
-    else:
-        result = request(f"https://jsr.io/@corbet-labs/ctypst/{version}_meta.json", missing=True)
-        if result is None:
-            return False
-        local = archive_files(directory / f"ctypst-{version}-jsr.tar.gz")
-        require(set(result["manifest"]) == {"/" + name for name in local}, "Existing JSR file inventory differs")
-        for name, content in local.items():
-            require(result["manifest"]["/" + name]["checksum"] == "sha256-" + digest(content), "Existing JSR file checksum differs")
-            url = f"https://jsr.io/@corbet-labs/ctypst/{version}/" + urllib.parse.quote(name, safe="/")
-            require(request(url, binary=True) == content, "Existing JSR downloaded bytes differ")
-    return True
-
-
-def publish_javascript(directory, identity):
-    manifest = load_component(directory, identity, "javascript")
-    # JSR before npm: npm trusted-publishing rules are not configured yet, so an
-    # npm authentication failure must not prevent the JSR publication.
-    for registry in ("jsr", "npm"):
-        if remote_javascript(directory, identity, manifest, registry):
-            print(f"{registry} already contains the exact prepared package")
-            continue
-        token = os.environ.get("NPM_TOKEN" if registry == "npm" else "JSR_TOKEN", "")
-        oidc = bool(os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL"))
-        require(token or oidc, f"A {registry} credential is required")
-        with tempfile.TemporaryDirectory(prefix="ctypst-publish-", dir=os.environ.get("TMPDIR")) as temporary:
-            work = Path(temporary)
-            env = {key: value for key, value in os.environ.items() if key not in TOKENS}
-            if registry == "npm":
-                require(shutil.which("npm"), "Provisioned npm is required")
-                archive = next(directory / name for name in manifest["artifacts"] if name.endswith(".tgz"))
-                (work / "npmrc").write_text("//registry.npmjs.org/:_authToken=${NPM_TOKEN}\n" if token else "")
-                (work / "npmrc").chmod(0o600)
-                env.update(npm_config_userconfig=str(work / "npmrc"), npm_config_fetch_retries="0")
-                if token:
-                    env["NPM_TOKEN"] = token
-                command = ["npm", "publish", str(archive), "--ignore-scripts", "--access=public", "--provenance=" + ("true" if oidc else "false")]
-            else:
-                require(shutil.which("deno"), "Provisioned Deno is required")
-                unpack(archive_files(directory / f"ctypst-{identity['version']}-jsr.tar.gz"), work)
-                command = ["deno", "publish", "--no-check", "--allow-dirty", "--node-modules-dir=none"]
-                if token:
-                    command += ["--no-provenance", "--token", token]
-            mutation(directory, registry, identity, manifest["artifacts"],
-                     lambda registry=registry: remote_javascript(directory, identity, manifest, registry),
-                     lambda: run(command, cwd=work, env=env, capture=True))
-
-
-def tag_commit(tag, token):
-    obj = request(f"{GITHUB}/repos/{REPOSITORY}/git/ref/tags/{urllib.parse.quote(tag, safe='')}", token=token)["object"]
-    for _ in range(4):
-        if obj["type"] == "commit":
-            return obj["sha"]
-        require(obj["type"] == "tag", "Release tag does not identify a commit")
-        obj = request(f"{GITHUB}/repos/{REPOSITORY}/git/tags/{obj['sha']}", token=token)["object"]
-    raise Failure("Release tag indirection exceeds the supported limit")
-
-
-def verify_tag(manifests, identity, token):
-    expected = {manifest["tag_commit"] for manifest in manifests}
-    require(len(expected) == 1, "Package receipts disagree on the immutable release tag")
-    require(tag_commit(identity["tag"], token) == next(iter(expected)), "Remote release tag differs from the prepared package identity")
-
-
-def hosted_attempt(identity):
-    """Ephemeral hosted jobs cannot safely invent a fresh journal on rerun."""
-    if not os.environ.get("GITHUB_RUN_ID"):
-        return
-    require(os.environ.get("GITHUB_RUN_ATTEMPT") == "1", "Hosted publication rerun refused; reconcile the retained bundle and journals through Crow")
-    run_id = int(os.environ["GITHUB_RUN_ID"])
-    runs = request(f"{GITHUB}/repos/{REPOSITORY}/actions/workflows/release.yml/runs?head_sha={identity['driver_commit']}&per_page=100", token=os.environ.get("GH_TOKEN"))
-    require(runs["total_count"] <= 100 and all(item["id"] == run_id for item in runs["workflow_runs"]),
-            "An earlier hosted release run exists for this source; reconcile its artifacts and journals before using the Crow fallback")
-
-
-def publish_github(directory, identity):
-    manifests = [load_component(directory, identity, component) for component in ("cargo", "javascript")]
-    token = os.environ.get("GH_TOKEN", "")
-    require(token, "GH_TOKEN is required for GitHub publication")
-    verify_tag(manifests, identity, token)
-    # This is the complete release, after all registries have been verified.
-    require(remote_cargo(directory, identity, manifests[0]), "Cargo publication remains incomplete")
-    for registry in ("jsr", "npm"):
-        require(remote_javascript(directory, identity, manifests[1], registry), f"{registry} publication remains incomplete")
-    lines = (ROOT / "CHANGELOG.md").read_text().splitlines()
-    heading = next((index for index, line in enumerate(lines) if line.startswith("## " + identity["version"] + " ")), None)
-    require(heading is not None, "Release changelog section is missing")
-    end = next((index for index in range(heading + 1, len(lines)) if lines[index].startswith("## ")), len(lines))
-    notes = "\n".join(lines[heading + 1:end]).strip()
-    require(notes, "Release notes are empty")
-    notes += "\n\nPackage provenance:\n" + "\n".join(
-        f"- {name}: source `{manifest['producing_commit']}`, source SHA-256 `{manifest['producing_source_sha256']}`."
-        for name, manifest in zip(("Cargo", "JavaScript"), manifests))
-    notes += f"\n- Immutable tag `{identity['tag']}`: `{manifests[0]['tag_commit']}`.\n"
-    title = "ctypst " + identity["version"]
-    endpoint = f"{GITHUB}/repos/{REPOSITORY}/releases/tags/{identity['tag']}"
-    def verify_release():
-        release = request(endpoint, token=token, missing=True)
-        if release is None:
-            return False
-        require(release["tag_name"] == identity["tag"] and release["name"] == title and release["body"] == notes, "Existing GitHub release differs; it will not be edited or overwritten")
-        return True
-    mutation(directory, "github-release", identity, {"title": title, "body": notes}, verify_release,
-             lambda: request(f"{GITHUB}/repos/{REPOSITORY}/releases", token=token, method="POST",
-                             data={"tag_name": identity["tag"], "name": title, "body": notes, "draft": True}))
-    release = request(endpoint, token=token)
-    assets = {name: checksum for manifest in manifests for name, checksum in manifest["artifacts"].items()}
-    for component in ("cargo", "javascript"):
-        name = component + ".json"
-        assets[name] = digest((directory / name).read_bytes())
-    inventory = {asset["name"]: asset for asset in release["assets"]}
-    require(len(inventory) == len(release["assets"]) and set(inventory) <= set(assets), "Existing release has duplicate or unexpected assets; publication refused")
-    require(release["draft"] or set(inventory) == set(assets), "Already-public release is incomplete; it will not be modified")
-    for name, checksum in assets.items():
-        def verify_asset(name=name, checksum=checksum):
-            current = request(endpoint, token=token)
-            found = [asset for asset in current["assets"] if asset["name"] == name]
-            require(len(found) <= 1, "Duplicate GitHub release asset")
-            if not found:
-                return False
-            url = found[0]["url"]
-            require(url.startswith(f"{GITHUB}/repos/{REPOSITORY}/releases/assets/"), "Unexpected release asset endpoint")
-            require(digest(request(url, token=token, binary=True)) == checksum, "Existing GitHub asset differs; overwrite refused")
-            return True
-        upload = f"https://uploads.github.com/repos/{REPOSITORY}/releases/{release['id']}/assets?name=" + urllib.parse.quote(name, safe="")
-        mutation(directory, "github-" + name, identity, {name: checksum}, verify_asset,
-                 lambda upload=upload, name=name: request(upload, token=token, method="POST", data=(directory / name).read_bytes()))
-    def verify_public_release():
-        current = request(endpoint, token=token)
-        inventory = {asset["name"]: asset for asset in current["assets"]}
-        require(len(inventory) == len(current["assets"]) and set(inventory) == set(assets), "Release asset inventory differs; publication refused")
-        for name, checksum in assets.items():
-            if current["draft"]:
-                url = inventory[name]["url"]
-                require(url.startswith(f"{GITHUB}/repos/{REPOSITORY}/releases/assets/"), "Unexpected release asset endpoint")
-                content = request(url, token=token, binary=True)
-            else:
-                url = inventory[name]["browser_download_url"]
-                require(url.startswith(f"https://github.com/{REPOSITORY}/releases/download/"), "Unexpected release download origin")
-                content = request(url, binary=True)
-            require(digest(content) == checksum, "Release download differs; publication refused")
-        return not current["draft"]
-    mutation(directory, "github-publish", identity, assets, verify_public_release,
-             lambda: request(f"{GITHUB}/repos/{REPOSITORY}/releases/{release['id']}", token=token,
-                             method="PATCH", data={"draft": False}))
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("stage", choices=("source", "prepare", "status", "preflight", "publish"))
+    parser.add_argument("stage", choices=("source", "prepare"))
     parser.add_argument("component", choices=("cargo", "javascript", "all"), nargs="?", default="all")
     args = parser.parse_args()
     if args.stage == "source" and not os.environ.get("RELEASE_TAG"):
@@ -635,39 +372,9 @@ def main():
     directory = artifacts_directory(identity)
     components = ("cargo", "javascript") if args.component == "all" else (args.component,)
     with release_lock(directory):
-        if args.stage == "prepare":
-            require(not any(os.environ.get(name) for name in TOKENS), "Publication credentials must be absent from preparation")
-            for component in components:
-                (prepare_cargo if component == "cargo" else prepare_javascript)(directory, identity)
-        else:
-            manifests = [load_component(directory, identity, component) for component in components]
-            verify_tag(manifests, identity, os.environ.get("GH_TOKEN"))
-            if args.stage == "status":
-                require(args.component == "cargo", "The status selector currently accepts Cargo only")
-                present = {"cargo": remote_cargo(directory, identity, manifests[0])}
-                if os.environ.get("GITHUB_OUTPUT"):
-                    with Path(os.environ["GITHUB_OUTPUT"]).open("a") as stream:
-                        stream.write("published=" + str(present["cargo"]).lower() + "\n")
-                print(json.dumps(present))
-                return
-            if args.stage == "preflight":
-                if "cargo" in components and not remote_cargo(directory, identity, manifests[0]):
-                    cargo_authorization()
-                if "javascript" in components:
-                    javascript = manifests[components.index("javascript")]
-                    for registry, tool, credential in (("jsr", "deno", "JSR_TOKEN"), ("npm", "npm", "NPM_TOKEN")):
-                        if not remote_javascript(directory, identity, javascript, registry):
-                            require(shutil.which(tool), f"Provisioned {tool} is required")
-                            require(os.environ.get(credential) or os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL"), f"{registry} authentication is unavailable")
-                if args.component == "all":
-                    require(os.environ.get("GH_TOKEN"), "GH_TOKEN is required for GitHub publication")
-                print("Selected artifact identities, existing registry bytes and credential availability checked; token permissions other than Cargo policy are proved only by the destination. No mutation performed")
-                return
-            hosted_attempt(identity)
-            for component in components:
-                (publish_cargo if component == "cargo" else publish_javascript)(directory, identity)
-            if args.component == "all":
-                publish_github(directory, identity)
+        require(not any(os.environ.get(name) for name in TOKENS), "Publication credentials must be absent from preparation")
+        for component in components:
+            (prepare_cargo if component == "cargo" else prepare_javascript)(directory, identity)
     print(json.dumps({"stage": args.stage, "component": args.component, "artifacts": str(directory), **identity}))
 
 
