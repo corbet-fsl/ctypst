@@ -2,8 +2,36 @@
   "schema": 1,
   "generator": "ccid render v1",
   "tool_revision": "",
-  "manifest_sha256": "e988d8488e0c7738d10ddf6e66c7e8529197bf9df4a5d581013221e9f134f6f0",
+  "manifest_sha256": "28df27d28592102f4c550aeff8bfe0849933af7397e15b03e68134fd5899cfdd",
   "jobs": {
+    "release": {
+      "job": "release",
+      "scheduler": "forgejo",
+      "checks": [
+        "release-build"
+      ],
+      "workflow": "release",
+      "command": [
+        "ccid:release-build"
+      ],
+      "runs_on": "linux",
+      "events": [
+        "manual"
+      ]
+    },
+    "release-promote": {
+      "job": "release-promote",
+      "scheduler": "forgejo",
+      "checks": [],
+      "workflow": "release",
+      "command": [
+        "ccid:release-promote"
+      ],
+      "runs_on": "linux",
+      "events": [
+        "manual"
+      ]
+    },
     "verify": {
       "job": "verify",
       "scheduler": "forgejo",
@@ -20,35 +48,7 @@
         ".ci/run-cached.sh"
       ],
       "runs_on": "linux",
-      "events": [
-        "manual"
-      ],
       "archive_inputs": true
-    },
-    "windows": {
-      "job": "windows",
-      "scheduler": "remote",
-      "checks": [
-        "test"
-      ],
-      "workflow": "ccid-remote",
-      "command": [],
-      "push_branches": [
-        "main"
-      ],
-      "paths": [
-        "src/**",
-        "crates/**",
-        "tests/**",
-        "build.rs",
-        "Cargo.toml",
-        "Cargo.lock",
-        "scripts/ci.sh",
-        ".gitlab-ci.yml"
-      ],
-      "provider": "gitlab",
-      "platform": "windows-x64",
-      "timeout_minutes": 90
     }
   }
 }

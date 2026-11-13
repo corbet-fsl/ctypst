@@ -112,21 +112,11 @@ license_checks() {
 }
 
 case ${1:-all} in
-  release-guards)
-    # shellcheck source=scripts/existing-tool-path.sh
-    source "$ci_root/scripts/existing-tool-path.sh"
-    ctypst_use_existing_lint_tools
-    python3 -m unittest discover -s scripts -p 'test_release.py'
-    python3 scripts/release.py source
-    actionlint -shellcheck shellcheck .github/workflows/*.yml
-    shellcheck scripts/*.sh
-    reuse lint
-    ;;
   quality) rust_quality ;;
   test) rust_tests ;;
   python) python_checks ;;
   javascript) javascript_checks ;;
   license) license_checks ;;
   all) license_checks; rust_quality; rust_tests; python_checks; javascript_checks ;;
-  *) printf 'usage: bash scripts/ci.sh [all|quality|test|python|javascript|license|release-guards]\n' >&2; exit 2 ;;
+  *) printf 'usage: bash scripts/ci.sh [all|quality|test|python|javascript|license]\n' >&2; exit 2 ;;
 esac

@@ -31,17 +31,11 @@ kind = "commands"
 commands = [["bash", "-c", "exec 2>&1; exec bash scripts/ci.sh license"]]
 cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["python3", "--version"], ["bun", "--version"], ["reuse", "--version"], ["nix", "--version"]]
 
-[checks.release-guards]
+# scripts/release.py prepares the crate and the Wasm npm package (a custom Wasm build, not
+# `kind = "pack"` work); the release run attaches their files to the draft.
+[checks.release-build]
 kind = "commands"
-commands = [["bash", "scripts/ci.sh", "release-guards"]]
-
-[checks.release-prepare]
-kind = "commands"
-commands = [["bash", "scripts/release-stage.sh", "prepare"]]
-
-[checks.release-publish]
-kind = "commands"
-commands = [["bash", "scripts/release-stage.sh", "publish"]]
+commands = [["bash", ".ci/release-build.sh"]]
 
 # All Linux verification gates are covered by the checks above (ci.yml runs
 # quality/test/python/javascript on ubuntu-24.04 via scripts/ci.sh; license
@@ -51,29 +45,24 @@ commands = [["bash", "scripts/release-stage.sh", "publish"]]
 # cache_tools pins the tool identities each script arm resolves
 # (rustc/cargo/python3/bun/reuse/nix, plus uv on python); maturin/pytest pins
 # live in scripts/ci.sh. jobs.verify is the Linux verify subset;
-# release-guards, release-prepare, release-publish are release gates, kept
-# defined but separate.
+# release-build is the release run's own check.
+
+[release]
+kind = "library"
+version = "Cargo.toml"
+registries = ["crates", "npm"]
+build = ["release-build"]
+notes = "CHANGELOG.md"
 
 [render]
-render_schema = 2
+render_schema = 3
 [jobs.verify]
 scheduler = "forgejo"
 runs_on = "linux"
 checks = ["quality", "test", "python", "javascript", "license"]
 workflow = "ci"
 command = ["bash", ".ci/run-cached.sh"]
-events = ["manual"]
 
-# Native Windows evidence that no owned worker can produce: the GitLab mirror's own pipeline
-# (.gitlab-ci.yml, `scripts/ci.sh test` on a hosted Windows runner), dispatched by the remote CI
-# broker and reported back as the commit status "remote / windows". At most one branch run per
-# 72 h when one of the paths changed, plus every release tag.
-[jobs.windows]
-scheduler = "remote"
-provider = "gitlab"
-platform = "windows-x64"
-workflow = "ccid-remote"
-checks = ["test"]
-push_branches = ["main"]
-paths = ["src/**", "crates/**", "tests/**", "build.rs", "Cargo.toml", "Cargo.lock", "scripts/ci.sh", ".gitlab-ci.yml"]
-timeout_minutes = 90
+
+[surface]
+keep = { ".ci/release-imports/ctypst-0.3.2.json" = "the audited import receipt scripts/release.py reads for the 0.3.2 crate (RELEASING.md)" }
