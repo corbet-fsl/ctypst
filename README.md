@@ -1,5 +1,9 @@
 # ctypst
 
+<!-- ccid:security:begin (rendered by ccid render; do not edit by hand) -->
+**Security and dependencies:** watched by Renovate (with OSV vulnerability alerts); an update is merged only when its tests pass. See the [security policy](SECURITY.md).
+<!-- ccid:security:end -->
+
 `ctypst` is the small native Typst substrate shared by CCVL and CareerVector.
 It embeds the compiler and selected fonts, renders deterministic PDFs, exposes
 Typst metadata queries and raster pages, and keeps product-specific document
