@@ -204,7 +204,7 @@ def crate_metadata(files, version):
     require(dependencies(manifest) == dependencies(original), "Normalized crate dependencies differ")
     require(manifest.get("features", {}) == original.get("features", {}), "Normalized features differ")
     require(not manifest.get("patch") and not manifest.get("replace"), "Local overrides in crate")
-    require(package.get("repository") == "https://github.com/" + REPOSITORY, "Unexpected crate repository")
+    require(package.get("repository") == "https://git.corbet.ch/corbet-fsl/ctypst", "Unexpected crate repository")
     return {"name": "ctypst", "vers": version, "deps": dependencies(manifest),
             "features": manifest.get("features", {}), "authors": package.get("authors", []),
             "description": package.get("description"), "documentation": package.get("documentation"),
