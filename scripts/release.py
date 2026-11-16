@@ -98,7 +98,7 @@ def working_source_files():
     for directory, directories, filenames in os.walk(ROOT):
         relative_directory = Path(directory).relative_to(ROOT)
         directories[:] = [name for name in directories if name != "__pycache__" and
-                          not (relative_directory == Path(".") and name in (".git", "target"))]
+                          not (relative_directory == Path(".") and name in (".git", ".ccid", "target"))]
         for name in directories:
             require(not (Path(directory) / name).is_symlink(), "Release source contains a symbolic link")
         for name in filenames:
