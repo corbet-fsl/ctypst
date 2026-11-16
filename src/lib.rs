@@ -2,6 +2,8 @@
 //! Safe, deterministic, embedded Typst for Rust applications.
 
 mod config;
+#[cfg(feature = "conformance")]
+pub mod conformance;
 mod engine;
 mod error;
 mod files;

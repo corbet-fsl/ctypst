@@ -3,6 +3,11 @@
 All notable changes to `ctypst` are documented here. The project follows
 Semantic Versioning.
 
+## Unreleased
+
+- New `conformance` feature: `ctypst::conformance` exposes the measure-v1 request vectors (shipped in
+  the package) decoded into typed vectors.
+
 ## 0.3.5 - 2026-11-16
 
 - Republish: the 0.3.3 and 0.3.4 npm packages lacked their Wasm files; no code or behavior

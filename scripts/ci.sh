@@ -40,7 +40,7 @@ rust_quality() {
   cargo fmt --check
   cargo clippy --locked --all-targets --all-features -- -D warnings
   cargo check --locked --no-default-features
-  for ci_feature in document-fonts format measure pdf raster svg wasm; do
+  for ci_feature in conformance document-fonts format measure pdf raster svg wasm; do
     cargo check --locked --no-default-features --features "$ci_feature"
   done
   cargo publish --locked --dry-run

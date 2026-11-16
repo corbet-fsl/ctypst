@@ -27,6 +27,8 @@ default = ["document-fonts", "format", "pdf", "raster"]
 document-fonts = []
 format = ["dep:typstyle-core"]
 measure = []
+# The frozen measure-v1 request vectors and a decoder, for facades and ports.
+conformance = ["measure"]
 pdf = ["dep:time", "dep:typst-pdf"]
 raster = ["dep:typst-render"]
 svg = ["dep:typst-svg"]
