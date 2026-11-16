@@ -3,6 +3,11 @@
 All notable changes to `ctypst` are documented here. The project follows
 Semantic Versioning.
 
+## 0.3.5 - 2026-11-16
+
+- Republish: the 0.3.3 and 0.3.4 npm packages lacked their Wasm files; no code or behavior
+  change.
+
 ## 0.3.4 - 2026-11-16
 
 - Republish: 0.3.3's npm package lacked its Wasm files (`wasm/web`, `wasm/nodejs`); no code
