@@ -385,7 +385,7 @@ dependencies = [
 
 [[package]]
 name = "ctypst"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "serde",
  "serde_json",
@@ -401,7 +401,7 @@ dependencies = [
 
 [[package]]
 name = "ctypst-python"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "ctypst",
  "pyo3",

@@ -14,7 +14,7 @@ your application needs:
 
 ```toml
 [dependencies]
-ctypst = { version = "0.3.3", default-features = false, features = ["document-fonts", "pdf"] }
+ctypst = { version = "0.3.4", default-features = false, features = ["document-fonts", "pdf"] }
 ```
 
 The default boundary is deliberately closed:
