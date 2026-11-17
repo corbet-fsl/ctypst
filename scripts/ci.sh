@@ -38,7 +38,9 @@ rust_quality() {
     return 1
   fi
   cargo fmt --check
+  cargo fmt --check --manifest-path "$ci_root/tools/release/Cargo.toml"
   cargo clippy --locked --all-targets --all-features -- -D warnings
+  cargo clippy --locked --manifest-path "$ci_root/tools/release/Cargo.toml" --target-dir "${CARGO_TARGET_DIR:-$ci_root/target}/release-tool" --all-targets -- -D warnings
   cargo check --locked --no-default-features
   for ci_feature in conformance document-fonts format measure pdf raster svg wasm; do
     cargo check --locked --no-default-features --features "$ci_feature"
@@ -49,6 +51,7 @@ rust_quality() {
 rust_tests() {
   rust_version
   cargo test --locked --all-features
+  cargo test --locked --manifest-path "$ci_root/tools/release/Cargo.toml" --target-dir "${CARGO_TARGET_DIR:-$ci_root/target}/release-tool"
 }
 
 python_checks() (
@@ -79,22 +82,7 @@ javascript_checks() (
   cd "$ci_js_root/js/@corbet-labs/ctypst"
   bun --version
   bun install --frozen-lockfile
-  python3 - "$ci_js_root" <<'PY'
-import json
-from pathlib import Path
-import sys
-import tomllib
-
-root = Path(sys.argv[1])
-version = tomllib.loads((root / "Cargo.toml").read_text())["package"]["version"]
-for path in ["js/@corbet-labs/ctypst/package.json", "js/@corbet-labs/ctypst/jsr.json"]:
-    if json.loads((root / path).read_text())["version"] != version:
-        raise SystemExit(f"{path} does not match crate version {version}")
-for path, table in [("bindings/python/Cargo.toml", "package"), ("bindings/python/pyproject.toml", "project")]:
-    if tomllib.loads((root / path).read_text())[table]["version"] != version:
-        raise SystemExit(f"{path} does not match crate version {version}")
-print(f"All package versions match {version}")
-PY
+  cargo run --quiet --locked --manifest-path "$ci_root/tools/release/Cargo.toml" --target-dir "${CARGO_TARGET_DIR:-$ci_root/target}/release-tool" -- versions "$ci_js_root"
   bash scripts/sync-assets.sh
   bun ./node_modules/typescript/bin/tsc --noEmit -p tsconfig.json
   bun scripts/conformance.mts

@@ -8,12 +8,12 @@ commands = [["bash", "-c", "exec 2>&1; exec bash scripts/ci.sh all"]]
 [checks.quality]
 kind = "commands"
 commands = [["bash", "-c", "exec 2>&1; exec bash scripts/ci.sh quality"]]
-cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["python3", "--version"], ["bun", "--version"], ["reuse", "--version"], ["nix", "--version"]]
+cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["bun", "--version"], ["reuse", "--version"], ["nix", "--version"]]
 
 [checks.test]
 kind = "commands"
 commands = [["bash", "-c", "exec 2>&1; exec bash scripts/ci.sh test"]]
-cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["python3", "--version"], ["bun", "--version"], ["reuse", "--version"], ["nix", "--version"]]
+cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["bun", "--version"], ["reuse", "--version"], ["nix", "--version"]]
 
 [checks.python]
 kind = "commands"
@@ -24,14 +24,14 @@ cache_env = ["CI_PYTHON"]
 [checks.javascript]
 kind = "commands"
 commands = [["bash", "-c", "exec 2>&1; exec bash scripts/ci.sh javascript"]]
-cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["python3", "--version"], ["bun", "--version"], ["reuse", "--version"], ["nix", "--version"]]
+cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["bun", "--version"], ["reuse", "--version"], ["nix", "--version"]]
 
 [checks.license]
 kind = "commands"
 commands = [["bash", "-c", "exec 2>&1; exec bash scripts/ci.sh license"]]
-cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["python3", "--version"], ["bun", "--version"], ["reuse", "--version"], ["nix", "--version"]]
+cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["bun", "--version"], ["reuse", "--version"], ["nix", "--version"]]
 
-# scripts/release.py prepares the crate and the Wasm npm package (a custom Wasm build, not
+# tools/release (ctypst-release) prepares the crate and the Wasm npm package (a custom Wasm build, not
 # `kind = "pack"` work); the release run attaches their files to the draft.
 [checks.release-build]
 kind = "commands"
@@ -43,7 +43,7 @@ commands = [["bash", ".ci/release-build.sh"]]
 # cleanliness, clippy --all-targets --all-features, per-feature check matrix,
 # publish dry-run, maturin/pytest venv, bun/tsc/conformance/pack, reuse lint.
 # cache_tools pins the tool identities each script arm resolves
-# (rustc/cargo/python3/bun/reuse/nix, plus uv on python); maturin/pytest pins
+# (rustc/cargo/bun/reuse/nix; python3 and uv only on the python product check); maturin/pytest pins
 # live in scripts/ci.sh. jobs.verify is the Linux verify subset;
 # release-build is the release run's own check.
 
@@ -65,4 +65,4 @@ command = ["bash", ".ci/run-cached.sh"]
 
 
 [surface]
-keep = { ".ci/release-imports/ctypst-0.3.2.json" = "the audited import receipt scripts/release.py reads for the 0.3.2 crate (RELEASING.md)" }
+keep = { ".ci/release-imports/ctypst-0.3.2.json" = "the audited import receipt tools/release reads for the 0.3.2 crate (RELEASING.md)" }

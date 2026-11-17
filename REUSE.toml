@@ -21,6 +21,7 @@ path = [
   "REUSE.toml",
   "rust-toolchain.toml",
   "scripts/**",
+  "tools/**",
   "js/**",
   "protocol/**",
   "typst/**",

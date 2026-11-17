@@ -2,3 +2,4 @@
 .moon/
 moon.yml
 .ccid/
+/tools/release/target/
