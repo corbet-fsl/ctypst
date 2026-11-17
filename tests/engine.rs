@@ -227,3 +227,19 @@ fn filesystem_links_cannot_escape_the_canonical_root() {
         Err(Error::Compile { .. })
     ));
 }
+
+#[test]
+fn compile_errors_report_messages_with_file_and_line() {
+    let engine = engine_with(
+        "#set text(font: \"Archivo\")\n#assert(false, message: \"summary cannot pack into 5 lines\")",
+    );
+    let error = engine
+        .compile(CompileRequest::new("main.typ"))
+        .err()
+        .unwrap();
+    let text = error.to_string();
+    assert!(text.contains("summary cannot pack into 5 lines"), "{text}");
+    assert!(!text.contains("SourceDiagnostic"), "{text}");
+    assert!(!text.contains("span:"), "{text}");
+    assert!(text.contains("main.typ:2"), "{text}");
+}

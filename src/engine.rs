@@ -3,7 +3,8 @@ use std::sync::Mutex;
 
 use typst::foundations::{Bytes, Dict, IntoValue};
 use typst::text::Font;
-use typst_as_lib::TypstEngine;
+use typst::{World as _, WorldExt as _};
+use typst_as_lib::{TypstAsLibError, TypstEngine, TypstWorld};
 
 use crate::files::{
     PackageFileList, Packages, SafeFsResolver, VirtualFiles, check_package, invalid_package,
@@ -295,11 +296,8 @@ impl Engine {
             let compiled = self
                 .inner
                 .compile_with_input::<_, _, Document>(request.source.as_str(), inputs);
-            let warnings = compiled
-                .warnings
-                .iter()
-                .map(|warning| format!("{warning:?}"))
-                .collect::<Vec<_>>();
+            let warnings =
+                format_diagnostics(&self.inner, request.source.as_str(), &compiled.warnings);
             if request.diagnostics == DiagnosticsPolicy::DenyWarnings && !warnings.is_empty() {
                 return Err(Error::Warnings {
                     document: request.source.clone(),
@@ -308,7 +306,7 @@ impl Engine {
             }
             let document = compiled.output.map_err(|error| Error::Compile {
                 document: request.source.clone(),
-                diagnostics: error.to_string(),
+                diagnostics: format_compile_error(&self.inner, request.source.as_str(), &error),
             })?;
             let actual = document.pages().len();
             if !request.pages.accepts(actual, self.limits.max_pages) {
@@ -356,5 +354,69 @@ impl Engine {
             });
         }
         Ok(())
+    }
+}
+
+/// Render one compilation failure for [`Error::Compile`]: the diagnostic
+/// messages with their file and line when the span resolves, never the
+/// `Debug` rendering of the whole diagnostic list. Non-Typst failures keep
+/// their existing text.
+fn format_compile_error(engine: &TypstEngine, source: &str, error: &TypstAsLibError) -> String {
+    match error {
+        TypstAsLibError::TypstSource(diagnostics) => {
+            format_diagnostics(engine, source, diagnostics).join("; ")
+        }
+        _ => error.to_string(),
+    }
+}
+
+/// Join Typst diagnostics as readable `message (file:line)` entries for
+/// [`Error::Compile`] and [`Error::Warnings`]. The file and line are omitted
+/// when the span does not resolve; the message is always kept.
+fn format_diagnostics(
+    engine: &TypstEngine,
+    source: &str,
+    diagnostics: &[typst::diag::SourceDiagnostic],
+) -> Vec<String> {
+    engine
+        .with_world(source, |world| {
+            diagnostics
+                .iter()
+                .map(|diagnostic| format_diagnostic(world, diagnostic))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_else(|_| {
+            diagnostics
+                .iter()
+                .map(|diagnostic| diagnostic.message.as_str().to_owned())
+                .collect()
+        })
+}
+
+/// One Typst diagnostic as `message (file:line)`: the file is the
+/// workspace-relative virtual path (or `package@vpath` for package files)
+/// and the line is 1-based. Detached spans keep the bare message.
+fn format_diagnostic(world: &TypstWorld<'_>, diagnostic: &typst::diag::SourceDiagnostic) -> String {
+    let message = diagnostic.message.as_str();
+    let Some(id) = diagnostic.span.id() else {
+        return message.to_owned();
+    };
+    let rooted = id.get();
+    let file = match rooted.root() {
+        typst::syntax::VirtualRoot::Project => rooted.vpath().get_without_slash().to_owned(),
+        typst::syntax::VirtualRoot::Package(spec) => {
+            format!("{spec}{}", rooted.vpath().get_with_slash())
+        }
+    };
+    let line = world.range(diagnostic.span).and_then(|range| {
+        let text = world.source(id).ok()?;
+        // The range start can split a character; without a clean prefix there
+        // is no line to report, so only the file is kept.
+        let prefix = text.text().get(..range.start.min(text.text().len()))?;
+        Some(prefix.split('\n').count())
+    });
+    match line {
+        Some(line) => format!("{message} ({file}:{line})"),
+        None => format!("{message} ({file})"),
     }
 }
