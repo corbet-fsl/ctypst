@@ -3,6 +3,12 @@
 All notable changes to `ctypst` are documented here. The project follows
 Semantic Versioning.
 
+## 0.3.7 - 2026-11-18
+
+- Readable Typst diagnostics: compilation and warning failures now report each diagnostic's message with
+  its file and 1-based line (for example `assertion failed: ... (main.typ:2)`) instead of the `Debug`
+  rendering of the whole diagnostic list. Other error kinds keep their existing text.
+
 ## 0.3.6 - 2026-11-17
 
 - New `conformance` feature: `ctypst::conformance` exposes the measure-v1 request vectors (shipped in
