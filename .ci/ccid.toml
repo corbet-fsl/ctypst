@@ -31,7 +31,7 @@ kind = "commands"
 commands = [["bash", "-c", "exec 2>&1; exec bash scripts/ci.sh license"]]
 cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["python3", "--version"], ["bun", "--version"], ["reuse", "--version"], ["nix", "--version"]]
 
-# tools/release (ctypst-release) prepares the crate and the Wasm npm package (a custom Wasm build, not
+# scripts/release.py prepares the crate and the Wasm npm package (a custom Wasm build, not
 # `kind = "pack"` work); the release run attaches their files to the draft.
 [checks.release-build]
 kind = "commands"
@@ -65,4 +65,4 @@ command = ["bash", ".ci/run-cached.sh"]
 
 
 [surface]
-keep = { ".ci/release-imports/ctypst-0.3.2.json" = "the audited import receipt tools/release reads for the 0.3.2 crate (RELEASING.md)" }
+keep = { ".ci/release-imports/ctypst-0.3.2.json" = "the audited import receipt scripts/release.py reads for the 0.3.2 crate (RELEASING.md)" }
