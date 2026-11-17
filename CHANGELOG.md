@@ -3,7 +3,7 @@
 All notable changes to `ctypst` are documented here. The project follows
 Semantic Versioning.
 
-## Unreleased
+## 0.3.6 - 2026-11-17
 
 - New `conformance` feature: `ctypst::conformance` exposes the measure-v1 request vectors (shipped in
   the package) decoded into typed vectors.

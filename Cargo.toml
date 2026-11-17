@@ -1,6 +1,6 @@
 [package]
 name = "ctypst"
-version = "0.3.5"
+version = "0.3.6"
 edition = "2024"
 rust-version = "1.92"
 description = "Safe, deterministic, embedded Typst for Rust applications"
