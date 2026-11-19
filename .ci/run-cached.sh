@@ -6,10 +6,12 @@ exec 2>&1
 : "${CI_COMMIT_SHA:?Missing verified source revision}"
 : "${CI_REPOSITORY_URL:?Missing canonical repository identity}"
 : "${CHECKS:?Missing declared check selection}"
-if [ "$CHECKS" != "quality,test,python,javascript,license" ]; then
-  echo "CHECKS must be exactly 'quality,test,python,javascript,license', got: $CHECKS" >&2
+if [ "$CHECKS" != "quality,test,python,javascript,license,portable-paths" ]; then
+  echo "CHECKS must be exactly 'quality,test,python,javascript,license,portable-paths', got: $CHECKS" >&2
   exit 2
 fi
+# portable-paths judges tracked file names with the verified ccid itself (cheap, no result reuse); the others are cached.
+cached_checks="${CHECKS%,portable-paths}"
 cache_root=${CI_CACHE_ROOT:-${CARGO_HOME:-}}
 [[ $cache_root = /* ]] || { echo 'An absolute persistent CI_CACHE_ROOT or CARGO_HOME is required' >&2; exit 2; }
 namespace=$(printf '%s' "$CI_REPOSITORY_URL" | sha256sum | cut -c1-24)
@@ -118,6 +120,8 @@ reuse --version
 actionlint --version
 shellcheck --version
 echo 'ctypst:stage=cached-checks'
-"$CCID_BIN" cached --repo "$PWD" --check "$CHECKS"
-IFS=, read -r -a selected_checks <<< "$CHECKS"
+"$CCID_BIN" cached --repo "$PWD" --check "$cached_checks"
+IFS=, read -r -a selected_checks <<< "$cached_checks"
 for check in "${selected_checks[@]}"; do test -s ".ccid/results/$check.jsonl"; done
+echo 'ctypst:stage=portable-paths'
+"$CCID_BIN" portable-paths --repo "$PWD" --mode enforce
