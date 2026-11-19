@@ -1359,10 +1359,7 @@ pub fn check_versions(root: &Path) -> R<String> {
         Some(v) => v.to_string(),
         None => return key_error(),
     };
-    for path in [
-        "js/ctypst/package.json",
-        "js/ctypst/jsr.json",
-    ] {
+    for path in ["js/ctypst/package.json", "js/ctypst/jsr.json"] {
         let found = read_json(&root.join(path))?;
         match found.get("version") {
             Some(v) if v.as_str() == Some(version.as_str()) => {}
