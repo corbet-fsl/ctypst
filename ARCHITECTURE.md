@@ -79,7 +79,7 @@ ctypst/
 │       ├── expected.json         canonical outputs
 │       └── README.md             invariants and compatibility rules
 ├── js/
-│   └── @corbet-labs/ctypst       Typst-WASM adapter and packaged assets
+│   └── ctypst                    Typst-WASM adapter and packaged assets
 └── fonts/
     ├── manifest.json             names, faces, licenses, and SHA-256 hashes
     └── *.ttf                     canonical font bytes

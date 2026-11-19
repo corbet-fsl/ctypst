@@ -10,7 +10,7 @@ the draft as `v<version>`. The registries and every copy carry those same bytes.
 | Files of the release | `ctypst-<version>.crate`, the npm archive and one receipt per component, plus `SHA256SUMS` from the promotion |
 | Publication | the datacenter-side publisher uploads the crate and the npm archive after checking them against `SHA256SUMS` |
 
-Keep `Cargo.toml`, `Cargo.lock`, `js/@corbet-labs/ctypst/package.json` and `jsr.json` versions consistent.
+Keep `Cargo.toml`, `Cargo.lock`, `js/ctypst/package.json` and `jsr.json` versions consistent.
 Published contents are immutable: use a new version for corrections. A native Windows build, where one is
 needed, is the linux windows-compile gate or the windows clone class, never a hosted runner.
 Source identity: `ctypst-release source` (`tools/release`) prints the commit, archive and content identity the

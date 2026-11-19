@@ -62,8 +62,8 @@ fn fixture_files(version: &str) -> Files {
         ),
         ("Cargo.lock", b"lock\n"),
         ("src/lib.rs", b"original"),
-        ("js/@corbet-labs/ctypst/package.json", package.as_bytes()),
-        ("js/@corbet-labs/ctypst/jsr.json", package.as_bytes()),
+        ("js/ctypst/package.json", package.as_bytes()),
+        ("js/ctypst/jsr.json", package.as_bytes()),
     ])
 }
 

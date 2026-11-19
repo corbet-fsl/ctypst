@@ -18,7 +18,7 @@ import {
     type MeasureItem,
 } from '../src/index.ts';
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 
 function ulpDistance(a: number, b: number): bigint {
     const view = new DataView(new ArrayBuffer(8));

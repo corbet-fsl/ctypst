@@ -79,7 +79,7 @@ javascript_checks() (
     --exclude=dist --exclude='*.tgz' --exclude="${ci_js_workspace##*/}" \
     -cf - . | tar -C "$ci_js_workspace" -xf -
   ci_js_root=$ci_js_workspace
-  cd "$ci_js_root/js/@corbet-labs/ctypst"
+  cd "$ci_js_root/js/ctypst"
   bun --version
   bun install --frozen-lockfile
   cargo run --quiet --locked --manifest-path "$ci_root/tools/release/Cargo.toml" --target-dir "${CARGO_TARGET_DIR:-$ci_root/target}/release-tool" -- versions "$ci_js_root"

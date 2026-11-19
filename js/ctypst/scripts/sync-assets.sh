@@ -5,7 +5,7 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ROOT="$(cd "$HERE/../../.." && pwd)"
+ROOT="$(cd "$HERE/../.." && pwd)"
 
 mkdir -p "$HERE/assets" "$HERE/fonts" "$HERE/src/generated"
 

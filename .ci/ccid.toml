@@ -21,6 +21,10 @@ commands = [["bash", "-c", "exec 2>&1; exec bash scripts/ci.sh python"]]
 cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["python3", "--version"], ["bun", "--version"], ["uv", "--version"], ["reuse", "--version"], ["nix", "--version"]]
 cache_env = ["CI_PYTHON"]
 
+[checks.portable-paths]
+kind = "commands"
+commands = [["ccid", "portable-paths", "--mode", "enforce"]]
+
 [checks.javascript]
 kind = "commands"
 commands = [["bash", "-c", "exec 2>&1; exec bash scripts/ci.sh javascript"]]
@@ -59,7 +63,7 @@ render_schema = 3
 [jobs.verify]
 scheduler = "forgejo"
 runs_on = "linux"
-checks = ["quality", "test", "python", "javascript", "license"]
+checks = ["quality", "test", "python", "javascript", "license", "portable-paths"]
 workflow = "ci"
 command = ["bash", ".ci/run-cached.sh"]
 

@@ -577,7 +577,7 @@ pub fn source_identity(root: &Path, env: &Env, default_tag: bool) -> R<Map<Strin
         )?;
     }
     for path in ["package.json", "jsr.json"] {
-        let found = read_json(&root.join("js/@corbet-labs/ctypst").join(path))?;
+        let found = read_json(&root.join("js/ctypst").join(path))?;
         match found.get("version") {
             Some(v) => require(
                 v.as_str() == Some(version.as_str()),
@@ -1129,7 +1129,7 @@ pub fn prepare_javascript(
         })?;
     }
     fs::copy(root.join("Cargo.toml"), stage.join("Cargo.toml"))?;
-    let package = stage.join("js/@corbet-labs/ctypst");
+    let package = stage.join("js/ctypst");
     run(
         &["bun", "install", "--frozen-lockfile"],
         &package,
@@ -1360,8 +1360,8 @@ pub fn check_versions(root: &Path) -> R<String> {
         None => return key_error(),
     };
     for path in [
-        "js/@corbet-labs/ctypst/package.json",
-        "js/@corbet-labs/ctypst/jsr.json",
+        "js/ctypst/package.json",
+        "js/ctypst/jsr.json",
     ] {
         let found = read_json(&root.join(path))?;
         match found.get("version") {
