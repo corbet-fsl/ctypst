@@ -38,12 +38,12 @@
     "typecheck": "tsc --noEmit -p ./tsconfig.json"
   },
   "peerDependencies": {
-    "@myriaddreamin/typst.ts": "0.7.0-rc2"
+    "@myriaddreamin/typst.ts": "0.7.0"
   },
   "devDependencies": {
-    "@myriaddreamin/typst-ts-web-compiler": "0.7.0-rc2",
-    "@myriaddreamin/typst.ts": "0.7.0-rc2",
-    "@types/node": "25.8.0",
+    "@myriaddreamin/typst-ts-web-compiler": "0.7.0",
+    "@myriaddreamin/typst.ts": "0.7.0",
+    "@types/node": "25.9.9",
     "typescript": "6.0.3"
   }
 }
