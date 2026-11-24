@@ -195,7 +195,7 @@ fn convert_format(format: &MeasureFormat) -> ctypst::measure::MeasureFormat {
 }
 
 /// Calibration ratios from the four Typst probes. Observability only.
-#[pyclass(get_all, skip_from_py_object)]
+#[pyclass(get_all)]
 #[derive(Clone, Copy, Debug)]
 pub struct MeasureCalibration {
     pub cap_ratio_regular: f64,
@@ -205,7 +205,7 @@ pub struct MeasureCalibration {
 }
 
 /// One measured fragment.
-#[pyclass(get_all, skip_from_py_object)]
+#[pyclass(get_all)]
 #[derive(Clone, Debug)]
 pub struct MeasureResult {
     pub id: String,
@@ -216,7 +216,7 @@ pub struct MeasureResult {
 }
 
 /// Native measurement client with result caching.
-#[pyclass(skip_from_py_object)]
+#[pyclass]
 pub struct MeasureClient {
     inner: ctypst::measure::MeasureClient,
 }
@@ -280,7 +280,7 @@ impl MeasureClient {
 }
 
 /// One compiled document: rendered many times without recompiling.
-#[pyclass(skip_from_py_object)]
+#[pyclass]
 pub struct Document {
     engine: std::sync::Arc<ctypst::Engine>,
     document: ctypst::Document,
@@ -344,7 +344,7 @@ fn convert_json(py: Python<'_>, value: &serde_json::Value) -> PyResult<Py<PyAny>
 }
 
 /// Reusable embedded Typst compiler with no ambient network or font access.
-#[pyclass(skip_from_py_object)]
+#[pyclass]
 pub struct Engine {
     inner: std::sync::Arc<ctypst::Engine>,
 }
