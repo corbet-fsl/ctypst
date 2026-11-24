@@ -173,7 +173,7 @@ impl EngineBuilder {
         if let Some(resolver) = &fs_resolver {
             builder = builder.add_file_resolver(resolver.clone());
         }
-        builder.comemo_evict_max_age(Some(self.cache_age));
+        builder = builder.comemo_evict_max_age(Some(self.cache_age));
         Ok(Engine {
             inner: builder.build(),
             virtual_files,
