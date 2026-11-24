@@ -519,7 +519,7 @@ fn package_table(manifest: &toml::Value) -> R<&toml::value::Table> {
 }
 
 fn parse_toml(text: &str) -> R<toml::Value> {
-    Ok(text.parse::<toml::Value>()?)
+    Ok(toml::from_str::<toml::Value>(text)?)
 }
 
 pub fn source_identity(root: &Path, env: &Env, default_tag: bool) -> R<Map<String, Value>> {

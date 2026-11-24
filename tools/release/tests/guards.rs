@@ -269,8 +269,7 @@ fn versions_gate_detects_mismatch() {
 
 #[test]
 fn dependencies_are_normalized_and_unresolved_ones_refused() {
-    let manifest: toml::Value = "[dependencies]\nz = \"1\"\na = { version = \"2\", package = \"b\", optional = true }\n[target.'cfg(unix)'.dev-dependencies]\nq = \"3\"\n"
-        .parse()
+    let manifest: toml::Value = toml::from_str("[dependencies]\nz = \"1\"\na = { version = \"2\", package = \"b\", optional = true }\n[target.'cfg(unix)'.dev-dependencies]\nq = \"3\"\n")
         .unwrap();
     let rows = dependencies(&manifest).unwrap();
     let names: Vec<_> = rows
@@ -279,9 +278,8 @@ fn dependencies_are_normalized_and_unresolved_ones_refused() {
         .collect();
     assert_eq!(names, ["b", "z", "q"]);
     assert_eq!(rows[0]["explicit_name_in_toml"], "a");
-    let local: toml::Value = "[dependencies]\nx = { path = \"../x\", version = \"1\" }\n"
-        .parse()
-        .unwrap();
+    let local: toml::Value =
+        toml::from_str("[dependencies]\nx = { path = \"../x\", version = \"1\" }\n").unwrap();
     assert!(matches!(dependencies(&local), Err(Fail::Msg(_))));
     let _ = BTreeMap::<u8, u8>::new();
     let _ = Path::new("");
