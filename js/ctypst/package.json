@@ -43,7 +43,7 @@
   "devDependencies": {
     "@myriaddreamin/typst-ts-web-compiler": "0.7.0",
     "@myriaddreamin/typst.ts": "0.7.0",
-    "@types/node": "25.9.9",
+    "@types/node": "26.6.6",
     "typescript": "6.0.3"
   }
 }
