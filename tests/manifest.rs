@@ -3,6 +3,7 @@
 //! cache keys against this manifest, so silent drift is a defect.
 
 use std::collections::HashSet;
+use std::fmt::Write as _;
 use std::path::PathBuf;
 
 use sha2::{Digest, Sha256};
@@ -63,10 +64,13 @@ fn manifest_hashes_match_font_bytes() {
         let bytes = std::fs::read(fonts_dir().join(&file)).expect("listed font is readable");
         let mut hasher = Sha256::new();
         hasher.update(&bytes);
-        assert_eq!(
-            format!("{:x}", hasher.finalize()),
-            sha256,
-            "sha256 drifts for {file}"
-        );
+        let digest = hasher
+            .finalize()
+            .iter()
+            .fold(String::new(), |mut hex, byte| {
+                write!(hex, "{byte:02x}").expect("writing to a String cannot fail");
+                hex
+            });
+        assert_eq!(digest, sha256, "sha256 drifts for {file}");
     }
 }
